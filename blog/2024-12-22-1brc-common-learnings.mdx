@@ -13,19 +13,19 @@ This is a cheatsheet  of optimisations done for 1brc challenges. It tries to sum
 ### Data encoding / parsing
 
 
-| Trick                                         | Outcome                                                                                     | Note                                                                                                                                               |
-| :---------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| converting contents of file as string: don't! | [~10% perf](https://github.com/gunnarmorling/1brc/discussions/57#discussioncomment-8153186) | Don't convert the contents of the file to`String`. Simply process raw bytes.                                                                       |
-| parsing float values<br />                      |                                                                                             | parsing after assuming only one place after decimal.                                                                                               |
-| parsing integer                               |                                                                                             | [Branchless Programming via Bit Manipulation](https://youtu.be/EFXxXFHpS0M?t=1255)<br /> this is not generalizable                                 |
+| Trick                                         | Outcome                                                                                     | Note                                                                                                                                                 |
+| :-------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| converting contents of file as string: don't! | [~10% perf](https://github.com/gunnarmorling/1brc/discussions/57#discussioncomment-8153186) | Don't convert the contents of the file to`String`. Simply process raw bytes.                                                                         |
+| parsing float values<br />                    |                                                                                             | parsing after assuming only one place after decimal.                                                                                                 |
+| parsing integer                               |                                                                                             | [Branchless Programming via Bit Manipulation](https://youtu.be/EFXxXFHpS0M?t=1255)<br /> this is not generalizable                                   |
 | parsing the city name (finding`;` separator)  |                                                                                             | If the data looks like`Tokio;13.4` and we want to find `;`<br/><br/>using 8 operations, you can find `;`.<br /><br /><br />SWAR = SIMD as a register |
 
 ### Reading files from disk
 
 
-| Trick                                                                                                                                  | Outcome                                                                                     | Note                                                                                                                                                                                                                  |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reading in chunks[golang](https://www.bytesizego.com/blog/one-billion-row-challenge-go#:~:text=Reading%20file%3A%20Read%20in%20chunks) | [~10% perf](https://github.com/gunnarmorling/1brc/discussions/57#discussioncomment-8153186) |                                                                                                                                                                                                                       |
+| Trick                                                                                                                                  | Outcome                                                                                     | Note                                                                                                                                                                                                                    |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reading in chunks[golang](https://www.bytesizego.com/blog/one-billion-row-challenge-go#:~:text=Reading%20file%3A%20Read%20in%20chunks) | [~10% perf](https://github.com/gunnarmorling/1brc/discussions/57#discussioncomment-8153186) |                                                                                                                                                                                                                         |
 | mmap                                                                                                                                   |                                                                                             | [mmap the input file. Split input based on core count and run it with a thread per core.](https://github.com/gunnarmorling/1brc/discussions/57#discussioncomment-8041416)<br/><br/>mmap is an unsafe operation in Rust. |
 
 
@@ -33,30 +33,19 @@ This is a cheatsheet  of optimisations done for 1brc challenges. It tries to sum
 
 
 | Trick                                        | Outcome                                                                                                         | Notes |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------- |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----- |
 | Don't do floating point operations. Use int. | [20% speed gains](https://github.com/gunnarmorling/1brc/discussions/57#discussioncomment-8024568)               |       |
 | Use fixed size integers instead of float     | [~10% gain in golang](https://benhoyt.com/writings/go-1brc/#:~:text=Solution%204%3A%20fixed%20point%20integers) |       |
 
 ### The Hashmap - simpler hash function
 
 
-| Trick | Outcome | Note | |
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-|
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-|
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-| | [Fixed Size hash table
-10k](https://github.com/gunnarmorling/1brc/discussions/57#:~:text=Treat%20the%20first%20eight%20bytes%20of%20the%20name%20as%20a%20hash%20key%20into%20a%20fixed%20size%2010k%20item%20hash%20table.)
-| [~40% gain - the custom hash table cuts down the time from 41.3 seconds to
-22.1s.](https://benhoyt.com/writings/go-1brc/#:~:text=the%20custom%20hash%20table%20cuts%20down%20the%20time%20from%2041.3%20seconds%20to%2022.1s.)
-| How to resolve collisions?<br /><br />- Find first unoccupied slot<br />- <br />[if
-hash collide, goto next empty slot
-algorithm](https://benhoyt.com/writings/go-1brc/#:~:text=It%E2%80%99s%20a%20simple%20implementation%20that%20uses%20the%20FNV%2D1a%20hash%20algorithm%20with%20linear%20probing%3A%20if%20there%E2%80%99s%20a%20collision%2C%20use%20the%20next%20empty%20slot.)
-| | Hash key - Integer, not String | [4x gain in a different
-competition](https://youtu.be/SVw9nKfVPx4?t=501) | Profiler showed that most of
-the time is spent in`Hashmap.get`.<br /> Not in 1brc, but in [other
-context](https://www.youtube.com/watch?v=SVw9nKfVPx4&t=501s), Hashmap.get was
+| Trick | Outcome | Note |
+|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [Fixed Size hash table 10k](https://github.com/gunnarmorling/1brc/discussions/57#:~:text=Treat%20the%20first%20eight%20bytes%20of%20the%20name%20as%20a%20hash%20key%20into%20a%20fixed%20size%2010k%20item%20hash%20table.) | [~40% gain - the custom hash table cuts down the time from 41.3 seconds to 22.1s.](https://benhoyt.com/writings/go-1brc/#:~:text=the%20custom%20hash%20table%20cuts%20down%20the%20time%20from%2041.3%20seconds%20to%2022.1s.)|
+ How to resolve collisions?<br /><br />- Find first unoccupied slot<br />- <br />[if hash collide, goto next empty slot algorithm](https://benhoyt.com/writings/go-1brc/#:~:text=It%E2%80%99s%20a%20simple%20implementation%20that%20uses%20the%20FNV%2D1a%20hash%20algorithm%20with%20linear%20probing%3A%20if%20there%E2%80%99s%20a%20collision%2C%20use%20the%20next%20empty%20slot.)
+| | Hash key - Integer, not String | [4x gain in a different competition](https://youtu.be/SVw9nKfVPx4?t=501) | Profiler showed that most of
+the time is spent in`Hashmap.get`.<br /> Not in 1brc, but in [other context](https://www.youtube.com/watch?v=SVw9nKfVPx4&t=501s), Hashmap.get was
 the bottleneck. hence this optimisation makes a lot of difference there, not in
 1brc. |
 
@@ -64,5 +53,5 @@ the bottleneck. hence this optimisation makes a lot of difference there, not in
 
 
 | Trick                                                        | Outcome                                                                                                                                                                                                                                  | Notes                                                     |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | address the go routine + rust tokio task + erlang processes? | [~ 4-6x gains](https://benhoyt.com/writings/go-1brc/#:~:text=Processing%20the%20input%20file%20in%20parallel%20provides%20a%20huge%20win%20over%20r1%2C%20taking%20the%20time%20from%201%20minute%2045%20seconds%20to%2022.6%20seconds.) | biggest gains are obtained by utilizing OS threads fully! |

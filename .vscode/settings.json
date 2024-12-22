@@ -1,8 +1,2 @@
 {
-
-   "workbench.editorAssociations": {
-  "*.md": "vscode.markdown.preview.editor",
-  "*.mdx": "vscode.markdown.preview.editor"
-}
-
 }
