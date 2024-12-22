@@ -13,7 +13,7 @@ const config: Config = {
   url: "https://twistingtwists.github.io",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: "/",
+  baseUrl: "/byte_vault",
   trailingSlash: false, // Recommended for GitHub Pages
 
   // GitHub pages deployment config.
