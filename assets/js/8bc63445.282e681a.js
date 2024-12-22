@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkbytevault=self.webpackChunkbytevault||[]).push([[786],{6744:e=>{e.exports=JSON.parse('{"tags":[{"label":"Performance","permalink":"/byte_vault/blog/tags/performance","description":"Blog posts related to improving and understanding performance.","count":1}]}')}}]);
