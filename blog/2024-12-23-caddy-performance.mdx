@@ -41,11 +41,11 @@ The investigation, led by Caddy maintainers including Matt Holt, involved:
 ### Table 1: System Metrics
 
 
-| **Commands**                                 | **Why It Is Relevant to Debugging**                                                                                               | **Output and Conclusion**                                                                                                                                                                                 |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ulimit -a`                                  | Checks system limits such as maximum number of open files and other resource constraints that could impact performance.           | No bottlenecks identified in file descriptors or resource limits.                                                                                                                                         |
-| `sysctl -p`                                  | Confirms network-related kernel parameters such as buffer sizes, default queuing discipline, and TCP congestion control settings. | <br/>`net.core.rmem_max = 2097152`<br/>`net.core.wmem_max = 2097152`<br/>`net.core.default_qdisc = fq`<br/>`net.ipv4.tcp_congestion_control = bbr`<br/><br/> Settings were optimized for high-speed networking. |
-| General hardware specs (CPU, RAM, NIC, etc.) | baseline hardware information                                                                                                     | Verified adequate resources (1 Core Ryzen 5950X, 1024MB RAM, 10Gbps NIC). No resource-related constraints.                                                                                                |
+| **Commands**                                 | **Why It Is Relevant to Debugging**                                                                                               | **Output and Conclusion**                                                                                                                                                                                                                                                |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ulimit -a`                                  | Checks system limits such as maximum number of open files and other resource constraints that could impact performance.           | No bottlenecks identified in file descriptors or resource limits.                                                                                                                                                                                                        |
+| `sysctl -p`                                  | Confirms network-related kernel parameters such as buffer sizes, default queuing discipline, and TCP congestion control settings. | <br/>`net.core.rmem_max = 2097152`<br/>`net.core.wmem_max = 2097152`<br/>`net.core.default_qdisc = fq`<br/>`net.ipv4.tcp_congestion_control = bbr`<br/><br/> Settings were optimized for high-speed networking.<br><br>TCP congestion control was correctly set to`bbr`. |
+| General hardware specs (CPU, RAM, NIC, etc.) | baseline hardware information                                                                                                     | Verified adequate resources (1 Core Ryzen 5950X, 1024MB RAM, 10Gbps NIC). No resource-related constraints.                                                                                                                                                               |
 
 ---
 
@@ -64,16 +64,12 @@ The investigation, led by Caddy maintainers including Matt Holt, involved:
 ### Table 3: Network Testing
 
 
-| **Commands**                                                                           | **Why It Is Relevant to Debugging**                                                          | **Output and Conclusion**                                                                |
-| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `curl -o /dev/null http://host.domain:port/1000MiB`                                    | Single-threaded test evaluates download performance under minimal concurrency.               | Network speeds were acceptable in single-threaded tests.                                 |
-| `echo 1 1 1 1 1 \| xargs -n1 -P5 curl -s -o /dev/null http://host.domain:port/1000MiB` |                                                                                              | Multi-threaded test assesses network performance under concurrent load.                  |
-| Tests from multiple locations (Singapore, Los Angeles, Seoul)                          | Evaluates network performance across different regions to identify geographical bottlenecks. | Performance was consistent across all regions. No major regional bottlenecks identified. |
-| Tests with different file sizes (100MiB, 1000MiB)                                      | Determines if performance issues are related to file size or payload.                        | No significant performance variance with different file sizes.                           |
-
-```
-
-```
+| **Commands**                                                                           | **Why It Is Relevant to Debugging**                                                          | **Output and Conclusion**                                               |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Tests from multiple locations (Singapore, Los Angeles, Seoul)                          | Evaluates network performance across different regions to identify geographical bottlenecks. | Performance was consistent across all regions.                          |
+| Tests with different file sizes (100MiB, 1000MiB)                                      | Determines if performance issues are related to file size or payload.                        | No significant performance variance with different file sizes.          |
+| `curl -o /dev/null http://host.domain:port/1000MiB`                                    | Single-threaded test evaluates download performance under minimal concurrency.               | acceptable network speed                                                |
+| `echo 1 1 1 1 1 \| xargs -n1 -P5 curl -s -o /dev/null http://host.domain:port/1000MiB` |                                                                                              | Multi-threaded test assesses network performance under concurrent load. |
 
 
 ---
@@ -81,12 +77,10 @@ The investigation, led by Caddy maintainers including Matt Holt, involved:
 ### Table 4: Kernel Analysis
 
 
-| **Commands**                                       | **Why It Is Relevant to Debugging**                                                                                      | **Output and Conclusion**                                         |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Checked systemd service file settings              | Ensures that the systemd configuration does not impose resource constraints, such as file descriptors or process limits. | Verified`LimitNOFILE=1048576`. No issues found.                   |
-| Examined`LimitNOFILE=1048576`                      | Confirms that the maximum number of open files is sufficient for high-concurrency workloads.                             | Open file limit was adequate for workload requirements.           |
-| Verified TCP congestion control settings           | Ensures optimal congestion control algorithm (`bbr`) is being used for high-speed networking.                            | TCP congestion control was correctly set to`bbr`.                 |
-| Analyzed open file limits and network buffer sizes | Ensures sufficient file descriptors and buffer sizes are available to avoid performance bottlenecks.                     | All limits and buffer sizes were sufficient, no changes required. |
+| **Commands**                                       | **Why It Is Relevant to Debugging**                                                                  | **Output and Conclusion**                                         |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Checked systemd service file settings              | Confirms that the maximum number of open files is sufficient for high-concurrency workloads.         | Verified`LimitNOFILE=1048576`. No issues found.                   |
+
 
 ## The Solution
 
