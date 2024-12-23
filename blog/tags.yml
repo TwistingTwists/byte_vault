@@ -7,3 +7,8 @@ performance:
   label: Performance
   permalink: /performance
   description: Blog posts related to improving and understanding performance.
+
+caddy:
+  label: Caddy
+  permalink: /caddy
+  description: caddy config and tuning

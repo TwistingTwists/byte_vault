@@ -1,0 +1,124 @@
+---
+slug: "how-to-solve-reverse-proxy-performance-issues-in-caddy-server-a-300-performance-boost-using-unix-sockets"
+title: "Caddy Reverse Proxy Performance: 300% Boost with Unix Sockets"
+date: 2024-12-23T00:00:00+00:00
+authors: [abeeshake] 
+tags: [ performance , caddy]
+---
+A recent GitHub issue  [#6751](https://github.com/caddyserver/caddy/issues/6751)  in the Caddy server repository revealed an interesting performance bottleneck when using multiple layers of reverse proxying. Here's what was discovered and how it was resolved.
+
+{/* truncate */}
+
+## The Problem
+
+A user reported significant performance degradation when implementing multiple layers of reverse proxies in Caddy v2.8.4. The setup consisted of a chain of reverse proxies:
+
+- Port 8081: Serving static files
+- Port 8082: Proxying to 8081
+- Port 8083: Proxying to 8082
+- Port 8084: Proxying to 8083
+
+When testing with a 1000MB file download, the performance metrics showed a clear pattern of degradation:
+
+### Multi-Threading Performance Impact
+
+- Direct file server (8081): ~300 Mbps with 5 threads
+- First proxy layer (8082): ~60 Mbps with 5 threads
+- Second proxy layer (8083): ~16 Mbps with 5 threads
+- Third proxy layer (8084): ~16 Mbps with 5 threads
+
+What made this particularly interesting was that the server's CPU usage remained surprisingly low (1-5%), suggesting that the bottleneck wasn't in processing power.
+
+## The Investigation
+
+The investigation, led by Caddy maintainers including Matt Holt, involved:
+
+1. Gathering system metrics
+2. Analyzing CPU and memory profiles
+3. Testing different network configurations
+4. Examining kernel settings
+
+### Table 1: System Metrics
+
+
+| **Commands**                                 | **Why It Is Relevant to Debugging**                                                                                               | **Output and Conclusion**                                                                                                                                                                                 |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ulimit -a`                                  | Checks system limits such as maximum number of open files and other resource constraints that could impact performance.           | No bottlenecks identified in file descriptors or resource limits.                                                                                                                                         |
+| `sysctl -p`                                  | Confirms network-related kernel parameters such as buffer sizes, default queuing discipline, and TCP congestion control settings. | <br/>`net.core.rmem_max = 2097152`<br/>`net.core.wmem_max = 2097152`<br/>`net.core.default_qdisc = fq`<br/>`net.ipv4.tcp_congestion_control = bbr`<br/><br/> Settings were optimized for high-speed networking. |
+| General hardware specs (CPU, RAM, NIC, etc.) | baseline hardware information                                                                                                     | Verified adequate resources (1 Core Ryzen 5950X, 1024MB RAM, 10Gbps NIC). No resource-related constraints.                                                                                                |
+
+---
+
+### Table 2: Profile Analysis
+
+
+| **Commands**                                                  | **Why It Is Relevant to Debugging**                                                                | **Output and Conclusion**                                                                          |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Attempted to collect goroutine profiles                       | Helps identify bottlenecks or inefficiencies in goroutines that may be causing performance issues. | Could not identify significant bottlenecks in goroutines.                                          |
+| Accessed CPU Profile via browser                              | Provides CPU usage details to determine if high CPU usage is a factor affecting performance.       | No high CPU usage detected. CPU load was between 1-5%.                                             |
+| `wget http://127.0.0.1:2019/debug/pprof/profile?seconds=1000` | Downloads detailed CPU profiles for offline analysis.                                              | Profiles downloaded successfully. Further analysis confirmed no CPU bottlenecks or inefficiencies. |
+| Collected heap profiles                                       | Helps analyze memory usage and potential leaks in the application.                                 | Memory usage was within acceptable limits, with no indication of memory leaks.                     |
+
+---
+
+### Table 3: Network Testing
+
+
+| **Commands**                                                                           | **Why It Is Relevant to Debugging**                                                          | **Output and Conclusion**                                                                |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `curl -o /dev/null http://host.domain:port/1000MiB`                                    | Single-threaded test evaluates download performance under minimal concurrency.               | Network speeds were acceptable in single-threaded tests.                                 |
+| `echo 1 1 1 1 1 \| xargs -n1 -P5 curl -s -o /dev/null http://host.domain:port/1000MiB` |                                                                                              | Multi-threaded test assesses network performance under concurrent load.                  |
+| Tests from multiple locations (Singapore, Los Angeles, Seoul)                          | Evaluates network performance across different regions to identify geographical bottlenecks. | Performance was consistent across all regions. No major regional bottlenecks identified. |
+| Tests with different file sizes (100MiB, 1000MiB)                                      | Determines if performance issues are related to file size or payload.                        | No significant performance variance with different file sizes.                           |
+
+```
+
+```
+
+
+---
+
+### Table 4: Kernel Analysis
+
+
+| **Commands**                                       | **Why It Is Relevant to Debugging**                                                                                      | **Output and Conclusion**                                         |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Checked systemd service file settings              | Ensures that the systemd configuration does not impose resource constraints, such as file descriptors or process limits. | Verified`LimitNOFILE=1048576`. No issues found.                   |
+| Examined`LimitNOFILE=1048576`                      | Confirms that the maximum number of open files is sufficient for high-concurrency workloads.                             | Open file limit was adequate for workload requirements.           |
+| Verified TCP congestion control settings           | Ensures optimal congestion control algorithm (`bbr`) is being used for high-speed networking.                            | TCP congestion control was correctly set to`bbr`.                 |
+| Analyzed open file limits and network buffer sizes | Ensures sufficient file descriptors and buffer sizes are available to avoid performance bottlenecks.                     | All limits and buffer sizes were sufficient, no changes required. |
+
+## The Solution
+
+The breakthrough came when testing with Unix sockets instead of TCP connections. By modifying the Caddyfile to use Unix sockets for inter-process communication, the performance issues were completely resolved. Here's what the optimized configuration looked like:
+
+```
+:8081 {
+    bind 0.0.0.0 unix//dev/shm/8081.sock
+    file_server browse
+    root * /opt/www
+}
+
+:8082 {
+    bind 0.0.0.0 unix//dev/shm/8082.sock
+    reverse_proxy unix//dev/shm/8081.sock
+}
+
+:8083 {
+    bind 0.0.0.0 unix//dev/shm/8083.sock
+    reverse_proxy unix//dev/shm/8082.sock
+}
+
+:8084 {
+    reverse_proxy unix//dev/shm/8083.sock
+}
+```
+
+## Key Takeaways
+
+1. TCP connection overhead can significantly impact performance in multi-layer reverse proxy setups
+2. Unix sockets provide a more efficient alternative for local inter-process communication
+3. Low CPU usage doesn't always mean optimal performance - network stack overhead can be the bottleneck
+4. When dealing with multiple local reverse proxies, consider using Unix sockets instead of TCP connections
+
+
