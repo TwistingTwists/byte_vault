@@ -12,3 +12,8 @@ caddy:
   label: Caddy
   permalink: /caddy
   description: caddy config and tuning
+
+rust:
+  label: Rust
+  permalink: /rust
+  description: Rust lang
