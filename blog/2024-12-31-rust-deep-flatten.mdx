@@ -27,6 +27,7 @@ Our goal is to flatten it into:
 ```rust
 let flattened = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
 ```
+{/* truncate */}
 
 The depth of nesting is not fixed—it could be `Vec<Vec<Vec<T>>>`, `Vec<Vec<Vec<Vec<T>>>>`, or deeper.
 
@@ -36,7 +37,7 @@ The depth of nesting is not fixed—it could be `Vec<Vec<Vec<T>>>`, `Vec<Vec<Vec
 
 Rust’s iterators and traits allow us to create a type-safe, recursive implementation to handle deep flattening. The solution uses three key components:
 
-1. **The **``** Trait**: A recursive trait defining how to flatten iterators.
+1. **The **Trait**: A recursive trait defining how to flatten iterators.
 2. **Base and Recursive Implementations**: Separate implementations for handling the base case (non-nested items) and recursive case (nested items).
 3. **A Wrapper Struct**: A helper type to simplify type inference.
 
