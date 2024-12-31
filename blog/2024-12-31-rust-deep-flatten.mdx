@@ -1,0 +1,177 @@
+---
+slug: "deep-flattening-in-rust-using-recursive-types"
+title: "Deep Flattening in Rust - Using Recursive Types "
+date: 2024-12-31T00:00:00+00:00
+authors: [joel-medicala, abeeshake] 
+tags: [ rust ]
+---
+
+
+### Deep Flattening in Rust: A Recursive Adventure
+
+Flattening nested data structures is a common problem in programming. However, flattening structures with an arbitrary depth—like nested `Vec`s within `Vec`s—can be tricky. Rust, with its strong type system and trait-based polymorphism, allows us to implement elegant solutions to such problems. In this post, we'll explore a recursive approach to deep flattening in Rust using traits, type inference, and iterators.
+
+#### The Goal
+
+Given a deeply nested structure, such as:
+
+```rust
+let nested_vec = vec![
+    vec![vec![1, 2, 3], vec![4, 5]],
+    vec![vec![6], vec![7, 8, 9]],
+];
+```
+
+Our goal is to flatten it into:
+
+```rust
+let flattened = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
+```
+
+The depth of nesting is not fixed—it could be `Vec<Vec<Vec<T>>>`, `Vec<Vec<Vec<Vec<T>>>>`, or deeper.
+
+---
+
+### TL;DR: high level idea
+
+Rust’s iterators and traits allow us to create a type-safe, recursive implementation to handle deep flattening. The solution uses three key components:
+
+1. **The **``** Trait**: A recursive trait defining how to flatten iterators.
+2. **Base and Recursive Implementations**: Separate implementations for handling the base case (non-nested items) and recursive case (nested items).
+3. **A Wrapper Struct**: A helper type to simplify type inference.
+
+---
+
+### Implementation
+
+The fun part lies in using Rust's types as in recursive way.
+
+#### The `DeepFlattenIteratorOf` Trait
+
+This trait defines the recursive structure of our flattening logic:
+
+```rust
+pub trait DeepFlattenIteratorOf<Depth, T> {
+    type DeepFlatten: Iterator<Item = T>;
+    fn deep_flatten(this: Self) -> Self::DeepFlatten;
+}
+```
+
+- `Depth` tracks the nesting level.
+- `T` is the type of the innermost element.
+- `DeepFlatten` is the resulting iterator after flattening.
+
+#### Base Case: No Nesting
+
+The base condition stops recursion when the structure is already flat:
+
+```rust
+impl<I: Iterator> DeepFlattenIteratorOf<(), I::Item> for I {
+    type DeepFlatten = Self;
+
+    fn deep_flatten(this: Self) -> Self::DeepFlatten {
+        this
+    }
+}
+```
+
+Here, when `Depth` is `()`, no further flattening is needed, and the iterator is returned as-is.
+
+#### Recursive Case: Flatten Nested Items
+
+For nested structures, the recursion continues until reaching the base case:
+
+```rust
+impl<Depth, I, T> DeepFlattenIteratorOf<(Depth,), T> for I
+where
+    Flatten<I>: DeepFlattenIteratorOf<Depth, T>,
+    I: Iterator,
+    I::Item: IntoIterator,
+{
+    type DeepFlatten = <Flatten<I> as DeepFlattenIteratorOf<Depth, T>>::DeepFlatten;
+
+    fn deep_flatten(this: Self) -> Self::DeepFlatten {
+        DeepFlattenIteratorOf::deep_flatten(this.flatten())
+    }
+}
+```
+
+- `Flatten<I>` handles one level of flattening.
+- The recursion continues until it reaches the base case.
+
+#### Wrapper Struct for Type Inference
+
+The `DeepFlatten` struct simplifies type inference by wrapping the recursive logic:
+
+```rust
+pub struct DeepFlatten<Depth, I, T>
+where
+    I: DeepFlattenIteratorOf<Depth, T>,
+{
+    inner: I::DeepFlatten,
+}
+
+impl<I: Iterator> DeepFlattenExt for I {}
+```
+
+This allows users to call the `.deep_flatten()` method directly:
+
+```rust
+pub trait DeepFlattenExt: Iterator + Sized {
+    fn deep_flatten<Depth, T>(self) -> DeepFlatten<Depth, Self, T>
+    where
+        Self: DeepFlattenIteratorOf<Depth, T>,
+    {
+        DeepFlatten {
+            inner: DeepFlattenIteratorOf::deep_flatten(self),
+        }
+    }
+}
+```
+
+#### Iterator Implementation for `DeepFlatten`
+
+Finally, the iterator implementation allows seamless iteration over flattened items:
+
+```rust
+impl<Depth, I, T> Iterator for DeepFlatten<Depth, I, T>
+where
+    I: DeepFlattenIteratorOf<Depth, T>,
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
+}
+```
+
+---
+
+### Example Usage
+
+Here’s how you can use the `deep_flatten` method to flatten nested structures:
+
+```rust
+fn main() {
+    let nested_vec = vec![
+        vec![vec![1, 2, 3], vec![4, 5]],
+        vec![vec![6], vec![7, 8, 9]],
+    ];
+
+    let flattened: Vec<i32> = nested_vec.into_iter().deep_flatten().collect();
+
+    assert_eq!(flattened, vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+    println!("Flattened result: {:?}", flattened);
+}
+```
+
+---
+
+This code gist was prepared by Joel is [available on rust playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=dbd26d3c4e89abbf50cde86dec296cd7)!
+
+Thanks Joel once again for bringing light to this pattern! 
+That's a wrap for this year! 
+
+See you in next year!
