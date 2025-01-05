@@ -17,3 +17,9 @@ rust:
   label: Rust
   permalink: /rust
   description: Rust lang
+
+
+dist-sys:
+  label: Distributed Systems
+  permalink: /dist-sys
+  description: All things distributed systems

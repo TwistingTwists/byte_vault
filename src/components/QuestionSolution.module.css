@@ -194,6 +194,23 @@
   transform: translateX(-50%);
 }
 
+.flipInstruction {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.9rem;
+  color: #666;
+  opacity: 0.8;
+  font-style: italic;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.flashcard:hover .flipInstruction {
+  opacity: 1;
+}
+
 /* Hover effects */
 .flashcard:hover {
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);

@@ -1,15 +1,12 @@
 ---
-slug: "ch-01-ddia-copy"
-title: "Understanding DDIA - Chapter 01,02 copy"
+slug: "ch-01-ddia"
+title: "Understanding DDIA - Chapter 01,02"
 date: 2025-01-05T00:00:00+00:00
 authors: [abeeshake] 
 tags: [ dist-sys ]
 ---
 
 import QSComponent, { Question, Solution } from '../src/components/QSComponent';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import processMultilineString from '../src/scripts/processMultiline';
 
 <QSComponent>
   <Question>
@@ -17,8 +14,6 @@ import processMultilineString from '../src/scripts/processMultiline';
     When would you choose one over the other?
   </Question>
   <Solution>
-    <ReactMarkdown className="markdownContent" remarkPlugins={[remarkGfm]}> 
-      {processMultilineString(`
         Here are the key differences between relational and document databases:
         
         1. **Schema**: 
@@ -43,7 +38,5 @@ import processMultilineString from '../src/scripts/processMultiline';
         - Rapid prototyping
         - Handling large amounts of unstructured data
         - Horizontal scaling is a priority
-      `)}
-    </ReactMarkdown>
   </Solution>
 </QSComponent>
