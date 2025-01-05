@@ -4,10 +4,44 @@
         <title>Byte Vault Blog</title>
         <link>https://twistingtwists.github.io/byte_vault/blog</link>
         <description>Byte Vault Blog</description>
-        <lastBuildDate>Tue, 31 Dec 2024 00:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Sun, 05 Jan 2025 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <language>en</language>
+        <item>
+            <title><![CDATA[Understanding DDIA - Chapter 01,02]]></title>
+            <link>https://twistingtwists.github.io/byte_vault/blog/ch-01-ddia</link>
+            <guid>https://twistingtwists.github.io/byte_vault/blog/ch-01-ddia</guid>
+            <pubDate>Sun, 05 Jan 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[Explain the key differences between relational databases and document databases.]]></description>
+            <content:encoded><![CDATA[<div class="wrapper_wXZ3"><div class="controls_KMOV"><label class="animationToggle_GfDu"><input type="checkbox" checked=""><span>Enable Animation</span></label></div><div class="flashcardContainer_KM2G"><div class="flashcard_qQbo"><div class="front_ckcI"><div class="content_DCy4"><h4 class="header_g9M7">Question</h4><div class="text_TAr2"><p>Explain the key differences between relational databases and document databases.
+When would you choose one over the other?</p></div></div><div class="flipInstruction_Cz25">Click to Flip</div></div><div class="back_OyGB"><div class="content_DCy4"><h4 class="header_g9M7">Solution</h4><div class="text_TAr2"><p>Here are the key differences between relational and document databases:</p><ol>
+<li><strong>Schema</strong>:</li>
+</ol><ul>
+<li>Relational: Rigid, predefined schema</li>
+<li>Document: Flexible, schema-less design</li>
+</ul><ol start="2">
+<li><strong>Data Model</strong>:</li>
+</ol><ul>
+<li>Relational: Data normalized across tables</li>
+<li>Document: Denormalized, nested documents</li>
+</ul><ol start="3">
+<li><strong>Scalability</strong>:</li>
+</ol><ul>
+<li>Relational: Vertical scaling primarily</li>
+<li>Document: Easier horizontal scaling</li>
+</ul><p>Choose Relational when:</p><ul>
+<li>Data consistency is crucial</li>
+<li>Complex queries and joins are needed</li>
+<li>ACID compliance is required</li>
+</ul><p>Choose Document when:</p><ul>
+<li>Schema flexibility is needed</li>
+<li>Rapid prototyping</li>
+<li>Handling large amounts of unstructured data</li>
+<li>Horizontal scaling is a priority</li>
+</ul></div></div><div class="flipInstruction_Cz25">Click to Flip</div></div></div></div></div>]]></content:encoded>
+            <category>Distributed Systems</category>
+        </item>
         <item>
             <title><![CDATA[Deep Flattening in Rust - Using Recursive Types ]]></title>
             <link>https://twistingtwists.github.io/byte_vault/blog/deep-flattening-in-rust-using-recursive-types</link>
