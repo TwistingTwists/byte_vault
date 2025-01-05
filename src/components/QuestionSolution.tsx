@@ -1,9 +1,18 @@
 import React, { useState } from 'react';
 import styles from './QuestionSolution.module.css';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+type ContentType = string | React.ReactNode;
+
+// Type guard for string content
+const isStringContent = (content: ContentType): content is string => {
+  return typeof content === 'string';
+};
 
 interface QuestionSolutionProps {
-  question: React.ReactNode;
-  solution: React.ReactNode;
+  question: ContentType;
+  solution: ContentType;
 }
 
 export default function QuestionSolution({ question, solution }: QuestionSolutionProps): JSX.Element {
@@ -12,6 +21,14 @@ export default function QuestionSolution({ question, solution }: QuestionSolutio
 
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
+  };
+
+  const renderContent = (content: ContentType) => {
+    return isStringContent(content) 
+      ? <ReactMarkdown 
+      className="markdownContent"
+      remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      : content;
   };
 
   return (
@@ -35,14 +52,18 @@ export default function QuestionSolution({ question, solution }: QuestionSolutio
           <div className={styles.front}>
             <div className={styles.content}>
               <h4 className={styles.header}>Question</h4>
-              <div className={styles.text}>{question}</div>
+              <div className={styles.text}>
+                {renderContent(question)}
+              </div>
             </div>
             <div className={styles.flipHint}>Click to flip ↻</div>
           </div>
           <div className={styles.back}>
             <div className={styles.content}>
               <h4 className={styles.header}>Solution</h4>
-              <div className={styles.text}>{solution}</div>
+              <div className={styles.text}>
+                <div className={styles['markdown-content']}>{renderContent(solution)}</div>
+              </div>
             </div>
             <div className={styles.flipHint}>Click to flip ↻</div>
           </div>

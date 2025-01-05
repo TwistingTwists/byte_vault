@@ -1,0 +1,49 @@
+---
+slug: "ch-01-ddia-copy"
+title: "Understanding DDIA - Chapter 01,02 copy"
+date: 2025-01-05T00:00:00+00:00
+authors: [abeeshake] 
+tags: [ dist-sys ]
+---
+
+import QSComponent, { Question, Solution } from '../src/components/QSComponent';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import processMultilineString from '../src/scripts/processMultiline';
+
+<QSComponent>
+  <Question>
+    Explain the key differences between relational databases and document databases. 
+    When would you choose one over the other?
+  </Question>
+  <Solution>
+    <ReactMarkdown className="markdownContent" remarkPlugins={[remarkGfm]}> 
+      {processMultilineString(`
+        Here are the key differences between relational and document databases:
+        
+        1. **Schema**: 
+          - Relational: Rigid, predefined schema
+          - Document: Flexible, schema-less design
+
+        2. **Data Model**:
+          - Relational: Data normalized across tables
+          - Document: Denormalized, nested documents
+
+        3. **Scalability**:
+          - Relational: Vertical scaling primarily
+          - Document: Easier horizontal scaling
+
+        Choose Relational when:
+        - Data consistency is crucial
+        - Complex queries and joins are needed
+        - ACID compliance is required
+        
+        Choose Document when:
+        - Schema flexibility is needed
+        - Rapid prototyping
+        - Handling large amounts of unstructured data
+        - Horizontal scaling is a priority
+      `)}
+    </ReactMarkdown>
+  </Solution>
+</QSComponent>

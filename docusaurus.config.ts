@@ -1,6 +1,7 @@
 import { themes as prismThemes } from "prism-react-renderer";
 import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
+import remarkGfm from "remark-gfm";
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -20,7 +21,9 @@ const config: Config = {
   // If you aren't using GitHub pages, you don't need these.
   organizationName: "TwistingTwists", // Usually your GitHub org/user name.
   projectName: "bytevault", // Usually your repo name.
-
+  scripts:[
+    {src: "/scripts/processMultiline.ts", async: true}
+  ],
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
 
@@ -53,15 +56,33 @@ const config: Config = {
           feedOptions: {
             type: ["rss", "atom"],
             xslt: true,
+            createFeedItems: async (params) => {
+              const {blogPosts, defaultCreateFeedItems, ...rest} = params;
+              return defaultCreateFeedItems({
+                // keep only the 10 most recent blog posts in the feed
+                blogPosts: blogPosts.filter((item, index) => index < 10),
+                ...rest,
+              });
+            },
           },
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl:
-            "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/",
+          // editUrl:
+          //   "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/",
           // Useful options to enforce blogging best practices
           onInlineTags: "warn",
           onInlineAuthors: "warn",
           onUntruncatedBlogPosts: "warn",
+          remarkPlugins: [remarkGfm],
+          // feed generator
+          // include: ['**/*.{md,mdx}'],
+          // exclude: [
+          //   '**/_*.{js,jsx,ts,tsx,md,mdx}',
+          //   '**/_*/**',
+          //   '**/*.test.{js,jsx,ts,tsx}',
+          //   '**/__tests__/**',
+          // ],
+          postsPerPage: 10,
         },
         theme: {
           customCss: "./src/css/custom.css",
