@@ -6,7 +6,19 @@ authors: [abeeshake]
 tags: [ rust ]
 ---
 
-theme 
+
+HTTP responses can be quite large and memory consumption can be a concern. In
+some cases, it is important to be able to handle large responses without
+loading the entire response into memory.
+
+One such scenario is when you want to download a large file from a server. If
+you were to load the entire file into memory, it would require a large amount
+of memory and would be inefficient. Instead, you can use a streaming approach
+to download the file directly to disk.
+
+This example will show you how to do just that using the `reqwest` and `tokio`
+crates (Rust). Here is the rough flow.
+
 
 ```mermaid
 flowchart TD
