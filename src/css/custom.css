@@ -33,3 +33,11 @@
   white-space: pre-wrap;
   
 }
+
+.mermaid svg {
+  max-width: 100%;
+  max-height: 50vh; /* Limits the height to the visible screen */
+  /* height: auto; Maintains aspect ratio */
+  display: block; /* Prevents inline spacing issues */
+  margin: 0 auto; /* Centers the SVG horizontally */
+}

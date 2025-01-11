@@ -6,6 +6,10 @@ import remarkGfm from "remark-gfm";
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
+  markdown:{
+    mermaid: true,
+  },
+  themes: ['@docusaurus/theme-mermaid'],
   title: "Byte Vault",
   tagline: "Things I know about things I don't know",
   favicon: "img/favicon.ico",
@@ -95,9 +99,9 @@ const config: Config = {
     // Replace with your project's social card
     image: "img/docusaurus-social-card.jpg",
     navbar: {
-      title: "My Site",
+      title: "Byte Vault",
       logo: {
-        alt: "My Site Logo",
+        alt: "Byte Vault",
         src: "img/logo.svg",
       },
       items: [
