@@ -12,8 +12,16 @@
         <id>https://twistingtwists.github.io/byte_vault/blog/streaming-http-to-disk</id>
         <link href="https://twistingtwists.github.io/byte_vault/blog/streaming-http-to-disk"/>
         <updated>2025-01-10T00:00:00.000Z</updated>
-        <summary type="html"><![CDATA[theme]]></summary>
-        <content type="html"><![CDATA[<p>theme</p>
+        <summary type="html"><![CDATA[HTTP responses can be quite large and memory consumption can be a concern. In]]></summary>
+        <content type="html"><![CDATA[<p>HTTP responses can be quite large and memory consumption can be a concern. In
+some cases, it is important to be able to handle large responses without
+loading the entire response into memory.</p>
+<p>One such scenario is when you want to download a large file from a server. If
+you were to load the entire file into memory, it would require a large amount
+of memory and would be inefficient. Instead, you can use a streaming approach
+to download the file directly to disk.</p>
+<p>This example will show you how to do just that using the <code>reqwest</code> and <code>tokio</code>
+crates (Rust). Here is the rough flow.</p>
 <!-- -->
 <!-- -->
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="understanding-the-streaming-process">Understanding the Streaming Process<a href="https://twistingtwists.github.io/byte_vault/blog/streaming-http-to-disk#understanding-the-streaming-process" class="hash-link" aria-label="Direct link to Understanding the Streaming Process" title="Direct link to Understanding the Streaming Process">​</a></h2>
