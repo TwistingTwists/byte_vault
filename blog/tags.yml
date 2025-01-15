@@ -23,3 +23,8 @@ dist-sys:
   label: Distributed Systems
   permalink: /dist-sys
   description: All things distributed systems
+
+dsa: 
+  label: Data structured & Algorithms
+  permalink: /dsa
+  description: DSA
