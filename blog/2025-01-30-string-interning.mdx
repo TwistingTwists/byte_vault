@@ -1,0 +1,140 @@
+
+---
+slug: "string-interning-rust"
+title: "String interning in Rust"
+date: 2025-01-30T00:00:00+00:00
+authors: [abeeshake] 
+tags: [ rust ]
+draft: true
+---
+
+## **Efficient String Interning in Rust: A `String::new()`-Like API**  
+
+String interning is a technique that ensures each unique string is stored only once in memory, reducing redundancy and improving performance. Inspired by `String::new()`, we designed an **interning API** that efficiently manages string storage using a **global interner**.
+
+### **How It Works**  
+- `InternedString::new()` returns an **empty interned string**.  
+- `InternedString::from(s)` interns a string, ensuring uniqueness.  
+- `as_str()`, `len()`, and `is_empty()` mimic `String` methods.  
+- A **global HashMap** stores interned strings, avoiding duplicates.  
+- **Thread safety** is ensured using `Lazy<Mutex<HashMap>>`.  
+
+
+
+### **Why String Interning Matters in Real-World Scenarios**  
+
+String interning is **critical in performance-sensitive applications** where **redundant string storage leads to memory overhead and slower lookups**. Here’s why it matters in real-world scenarios:
+
+### **1. Compiler and Interpreter Optimization**  
+- **Example:** Rust’s compiler, Python’s CPython, and Java’s JVM use string interning to optimize symbol tables.  
+- **Why?** Identifiers (variable names, function names) are frequently repeated, and interning ensures they **occupy minimal memory** while enabling **fast comparisons**.
+
+### **2. Embedded Systems & IoT**  
+- **Example:** Logging frameworks like `defmt` use interning to minimize **flash storage usage** on microcontrollers.  
+- **Why?** Embedded devices have **limited RAM and storage**, so reducing redundant string allocations improves efficiency.
+
+### **3. Web Servers & API Performance**  
+- **Example:** High-traffic APIs handling millions of requests often receive the same strings (e.g., headers, JSON keys).  
+- **Why?** Interning prevents redundant allocations, reducing **heap fragmentation and memory consumption**.
+
+### **4. Databases & Search Engines**  
+- **Example:** Search engines like Elasticsearch and databases like PostgreSQL intern frequently queried strings (e.g., column names, keywords).  
+- **Why?** Fast comparisons on interned strings improve query performance and reduce memory duplication.
+
+By using string interning strategically, applications **save memory, boost performance, and handle scale efficiently**. 🚀
+
+
+
+```rust
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use once_cell::sync::Lazy; // Ensures thread-safe global interner
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct InternedString {
+    inner: Arc<str>,
+}
+
+// Global interner (singleton)
+static INTERNER: Lazy<Mutex<HashMap<Arc<str>, ()>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+
+impl InternedString {
+    /// Creates an empty interned string (similar to `String::new()`)
+    pub fn new() -> Self {
+        Self::intern("")
+    }
+
+    /// Interns a given string and returns an InternedString
+    pub fn from<S: AsRef<str>>(s: S) -> Self {
+        Self::intern(s.as_ref())
+    }
+
+    /// Returns a reference to the interned string
+    pub fn as_str(&self) -> &str {
+        &self.inner
+    }
+
+    /// Returns the length of the interned string
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    /// Checks if the interned string is empty
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+    /// Interns a string, ensuring no duplicates exist
+    fn intern(s: &str) -> Self {
+        let mut interner = INTERNER.lock().unwrap();
+
+        // If the string is already interned, return the existing reference
+        if let Some(existing) = interner.keys().find(|k| k.as_ref() == s) {
+            return InternedString {
+                inner: Arc::clone(existing),
+            };
+        }
+
+        // Otherwise, intern the new string
+        let arc_str = Arc::from(s);
+        interner.insert(Arc::clone(&arc_str), ());
+        
+        InternedString { inner: arc_str }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_empty_string() {
+        let empty1 = InternedString::new();
+        let empty2 = InternedString::new();
+        assert_eq!(empty1, empty2);
+        assert!(empty1.is_empty());
+    }
+
+    #[test]
+    fn test_interning() {
+        let s1 = InternedString::from("hello");
+        let s2 = InternedString::from("hello");
+        let s3 = InternedString::from("world");
+
+        assert_eq!(s1, s2);
+        assert_ne!(s1, s3);
+    }
+
+    #[test]
+    fn test_string_length() {
+        let s = InternedString::from("test");
+        assert_eq!(s.len(), 4);
+    }
+
+    #[test]
+    fn test_string_content() {
+        let s = InternedString::from("RustLang");
+        assert_eq!(s.as_str(), "RustLang");
+    }
+}
+```
