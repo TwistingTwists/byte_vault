@@ -1,0 +1,49 @@
+---
+slug: "rust-tips-tricks"
+title: "Rust tricks for the average developer (me)"
+date: 2025-01-18T00:00:00+00:00
+draft: true
+authors: [abeeshake] 
+tags: [ rust ]
+---
+
+
+import TOCInline from '@theme/TOCInline';
+
+<TOCInline toc={toc} />
+
+### 001 : `&str` and `AsRef<OsStr>`
+
+The change from:
+
+```rust
+pub fn load_extension(&self, path: &str) -> Result<()>
+```
+
+to:
+
+```rust
+pub fn load_extension<P: AsRef<std::ffi::OsStr>>(&self, path: P) -> Result<()>
+```
+
+improves flexibility and usability. The original function only accepted `&str`, requiring explicit conversion for types like `String`, `PathBuf`, or `Path`. The updated version uses a generic parameter `P` with the `AsRef<std::ffi::OsStr>` trait, allowing it to accept any type that can be referenced as an `OsStr`, such as `&str`, `String`, `Path`, or `PathBuf`.
+
+**Original Implementation:**
+```rust
+use std::path::Path;
+
+let path_str = String::from("/some/path");
+let path_ref = Path::new("/another/path");
+
+// Example 1: Using String
+instance.load_extension(path_str);
+
+// Example 2: Using &Path
+instance.load_extension(&path_ref);
+
+// Example 3: Using Path directly
+instance.load_extension(Path::new("/yet/another/path"));
+
+```
+
+This reduces boilerplate and improves compatibility with different path types.

@@ -1,0 +1,78 @@
+---
+slug: "practical-dsa"
+title: "Real World DSA applications"
+date: 2025-01-15T00:00:00+00:00
+draft: true
+authors: [abeeshake] 
+tags: [ dsa ]
+---
+
+
+Who is this blog for?
+
+1. Been doing DSA without knowing if I will ever implement this in my job
+2. Curios cases where DSA is important
+3. Caring about the craft [shopify-principles-blog] - Joel's thought on 'visibility of the underlying abstractions!'
+   1. how to cultivate point 3? start by reading deep dive technical blogs
+   2. implement a basic toy version of it
+   3. write about it.
+4. How to gain more visibility of 'what is playing underneath my feet?'
+   1. read codebase. 
+   2. - Fixer at meta is someone who can GO in on a codebase and debug things much much faster than anyone else. => for debugging you need to read code. and Errors. and correlate your code with errors. 
+   3. Also, have end-to-end "visbility" in your tools / language / framework.
+      1. Recognise visbility is missing, and fill that gap. How?
+
+
+
+# Trie Hard - Cloudflare
+
+
+# Priority Queues 
+
+Compression - Huffman Coding
+
+### Huffman Coding
+Huffman coding is a lossless data compression algorithm developed by David Huffman. It is used to encode data in a way that minimizes the total length of the encoded output. The key idea is to assign shorter binary codes to more frequent characters and longer codes to less frequent ones.
+
+#### Steps of Huffman Coding:
+1. **Frequency Analysis**: Analyze the frequency of each character in the input data.
+2. **Priority Queue**: Use a priority queue (min-heap) to build a binary tree, where each node represents a character and its frequency.
+3. **Tree Construction**: Combine two nodes with the smallest frequencies into a new node, iteratively building a tree where each leaf node represents a character.
+4. **Code Assignment**: Assign binary codes to characters based on the traversal of the tree (e.g., left = `0`, right = `1`).
+
+This results in a prefix-free code (no code is a prefix of another), ensuring efficient decoding.
+
+---
+
+### Huffman Coding in HTTP/2
+HTTP/2 uses Huffman coding as part of its **HPACK** header compression algorithm to reduce the size of HTTP headers, improving efficiency, particularly for large requests or responses with repetitive headers.
+
+#### How It Works in HTTP/2:
+1. **HPACK Compression**:
+   - HTTP/2 headers are compressed using HPACK, which combines static and dynamic dictionaries along with Huffman coding.
+   - Huffman coding is used to encode the header names and values into a compact binary form.
+
+2. **Static Huffman Table**:
+   - HTTP/2 uses a predefined static Huffman table optimized for typical HTTP headers.
+   - This table maps common characters in headers to shorter binary sequences.
+
+3. **Efficiency**:
+   - By compressing headers, HTTP/2 reduces the amount of data transferred over the network.
+   - This is especially useful for headers that are repeated across requests in a session.
+
+#### Example:
+- Header: `Content-Type: text/html`
+- Compressed using HPACK with Huffman coding, resulting in a binary sequence that is significantly smaller than the original header size.
+
+Still curious? Read this [awesome blog on http 1.1 vs http2 by VictoriaLogs](https://victoriametrics.com/blog/go-http2/)
+
+
+
+-----
+
+# Other topics 
+
+Graceful shutdown 
+
+- [HTTP/2 - GOAWAY headers in data frame ](https://victoriametrics.com/blog/go-http2/#:~:text=I%E2%80%99m%20wrapping%20up%2C%20any%20streams%20with%20higher%20IDs%20won%E2%80%99t%20be%20processed%2C%20but%20everything%20else%20that%E2%80%99s%20in%20progress%20can%20finish%20normally.%E2%80%9D%20_That%E2%80%99s%20why%20it%E2%80%99s%20considered%20a%20graceful%20shutdown.)
+  -
