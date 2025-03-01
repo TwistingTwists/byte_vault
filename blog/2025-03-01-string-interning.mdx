@@ -1,16 +1,34 @@
-
 ---
 slug: "string-interning-rust"
 title: "String interning in Rust"
-date: 2025-01-30T00:00:00+00:00
+date: 2025-03-01T00:00:00+00:00
 authors: [abeeshake] 
 tags: [ rust ]
-draft: true
+draft: false
 ---
 
-## **Efficient String Interning in Rust: A `String::new()`-Like API**  
+### What is String Interning?
 
-String interning is a technique that ensures each unique string is stored only once in memory, reducing redundancy and improving performance. Inspired by `String::new()`, we designed an **interning API** that efficiently manages string storage using a **global interner**.
+String interning is a technique that ensures each unique string is stored only once in memory, reducing redundancy and improving performance.
+
+
+### **Why String Interning Matters in Real-World Scenarios**  
+
+String interning is **critical in performance-sensitive applications** where **redundant string storage leads to memory overhead and slower lookups**. Here’s why it matters in real-world scenarios:
+
+### **Real-World Use Cases**
+String interning reduces memory usage and improves performance by storing each unique string only once.
+
+The following table highlights some real-world use cases where string interning is beneficial:
+
+| Use Case                         | Example                                                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Compiler and Interpreter Optimization | Rust’s compiler, Python’s CPython, and Java’s JVM use string interning to optimize symbol tables.       |
+| Embedded Systems & IoT             | Logging frameworks like `defmt` use interning to minimize **flash storage usage** on microcontrollers. |
+| Web Servers & API Performance      | High-traffic APIs handling millions of requests often receive the same strings (e.g., headers, JSON keys). |
+| Databases & Search Engines         | Search engines like Elasticsearch and databases like PostgreSQL intern frequently queried strings.        |
+
+
 
 ### **How It Works**  
 - `InternedString::new()` returns an **empty interned string**.  
@@ -20,30 +38,7 @@ String interning is a technique that ensures each unique string is stored only o
 - **Thread safety** is ensured using `Lazy<Mutex<HashMap>>`.  
 
 
-
-### **Why String Interning Matters in Real-World Scenarios**  
-
-String interning is **critical in performance-sensitive applications** where **redundant string storage leads to memory overhead and slower lookups**. Here’s why it matters in real-world scenarios:
-
-### **1. Compiler and Interpreter Optimization**  
-- **Example:** Rust’s compiler, Python’s CPython, and Java’s JVM use string interning to optimize symbol tables.  
-- **Why?** Identifiers (variable names, function names) are frequently repeated, and interning ensures they **occupy minimal memory** while enabling **fast comparisons**.
-
-### **2. Embedded Systems & IoT**  
-- **Example:** Logging frameworks like `defmt` use interning to minimize **flash storage usage** on microcontrollers.  
-- **Why?** Embedded devices have **limited RAM and storage**, so reducing redundant string allocations improves efficiency.
-
-### **3. Web Servers & API Performance**  
-- **Example:** High-traffic APIs handling millions of requests often receive the same strings (e.g., headers, JSON keys).  
-- **Why?** Interning prevents redundant allocations, reducing **heap fragmentation and memory consumption**.
-
-### **4. Databases & Search Engines**  
-- **Example:** Search engines like Elasticsearch and databases like PostgreSQL intern frequently queried strings (e.g., column names, keywords).  
-- **Why?** Fast comparisons on interned strings improve query performance and reduce memory duplication.
-
-By using string interning strategically, applications **save memory, boost performance, and handle scale efficiently**. 🚀
-
-
+### Implementation of String Interning in Rust
 
 ```rust
 use std::collections::HashMap;

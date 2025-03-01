@@ -1,0 +1,107 @@
+---
+slug: "reliable-structured-outputs-with-llms"
+title: "Reliable Structured Outputs with LLMs"
+date: 2025-03-01T00:00:00+00:00
+draft: true
+authors: [abeeshake] 
+tags: [ json-parser, llm ]
+---
+
+### Ensuring Deterministic Outputs from LLMs
+
+There are several strategies to obtain structured outputs from LLMs.
+
+In Python, libraries such as Pydantic and Instructor facilitate structured output via JSON schema-based tool invocation. If you have the capability to host your own model, sglang is a viable option.
+
+Pydantic validators are highly effective, provided that the input is in the form of a valid JSON string.
+
+Let's see by example. For starters, here is the schema we want to parse.
+
+```python
+from pydantic import BaseModel, ValidationError
+
+class User(BaseModel):
+    id: int
+    name: str
+    email: str
+    active: bool = True  # default value
+
+# JSON representation of the data
+json_data = '''
+{
+    "id": 123,
+    "name": "Alice",
+    "email": "alice@example.com"
+}
+'''
+
+try:
+     # Directly validate and parse the JSON string
+    user = User.model_validate_json(json_data)
+    print("Validated Data:", user)
+except ValidationError as e:
+    print("Validation Error:", e.json())
+
+```
+This works. Pydantic has a pretty solid _json_ to data model convertor. But it has to be a valid json string. Let's explore further.
+
+```python
+
+# JSON representation of the data
+# typical replies of a small LLM which does not adhere well to 'output_json' command
+json_data = '''
+Here is your json
+{
+    "id": 123,
+    "name": "Alice",
+    "email": "alice@example.com"
+}
+'''
+
+try:
+     # Directly validate and parse the JSON string using the new method
+    user = User.model_validate_json(json_data)
+    print("Validated Data:", user)
+except ValidationError as e:
+    print("Validation Error:", e.json())
+
+
+```
+
+
+Error is: 
+```python 
+Validation Error: [{"type":"json_invalid","loc":[],"msg":"Invalid JSON: expected value at line 2 column 1","input":"\nHere is your json\n{\n    \"id\": 123,\n    \"name\": \"Alice\",\n    \"email\": \"alice@example.com\"\n}\n","ctx":{"error":"expected value at line 2 column 1"},"url":"https://errors.pydantic.dev/2.10/v/json_invalid"}]
+```
+
+Now, let's add one more step in the mix. Let's use the json_partial_py library to parse the JSON string. and then pass it to pydantic.
+
+
+```python
+
+from json_partial_py import to_json_string # <---- this is a new import
+
+# typical replies of a small LLM which does not adhere well to 'output_json' command
+json_data = '''
+Here is your json
+{
+    "id": 123,
+    "name": "Alice",
+    "email": "alice@example.com"
+}
+'''
+
+try:
+    stringified_json = to_json_string(json_data)
+     # Directly validate and parse the JSON string using the new method
+    user = User.model_validate_json(stringified_json)
+    print("Validated Data:", user)
+except ValidationError as e:
+    print("Validation Error:", e.json())
+
+
+```
+
+and voila!! Now you can rest assured that you will get clean json parsed from the LLM output.
+
+P.S. I am author of the [`json_partial_py` library](https://pypi.org/project/json_partial_python/). It was extracted from [baml project](https://github.com/BoundaryML/baml?tab=readme-ov-file).
