@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tokio Task Scheduling Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .controls button, .controls label {
+            padding: 8px 15px;
+            border: 1px solid #ccc;
+            background-color: #eee;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .controls button.active {
+            background-color: #d0e0ff;
+            font-weight: bold;
+            border-color: #a0b0dd;
+        }
+        .controls input[type="range"] {
+            cursor: pointer;
+        }
+        #visualization {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden; /* Clip elements going outside */
+        }
+        .worker-lane, .ready-queue-area, .waiting-area {
+            fill: #e0e0e0;
+            stroke: #aaa;
+            stroke-width: 1px;
+        }
+        .task {
+            stroke: #333;
+            stroke-width: 1px;
+            rx: 3; /* Rounded corners */
+            ry: 3;
+        }
+        .task-cpu { fill: steelblue; }
+        .task-io { fill: mediumseagreen; }
+        .task-label {
+            font-size: 10px;
+            fill: white;
+            text-anchor: middle;
+            pointer-events: none; /* Prevent text blocking clicks on rect */
+             dominant-baseline: central;
+        }
+        .budget-bg { fill: #ddd; }
+        .budget-fg { fill: orange; }
+        .yield-marker {
+            fill: red;
+            opacity: 0.7;
+        }
+        .area-label {
+            font-size: 12px;
+            fill: #555;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Tokio Task Scheduling Visualization</h1>
+
+<div class="controls">
+    <button id="btn-scenario-none">Scenario: No Yield</button>
+    <button id="btn-scenario-yieldnow">Scenario: yield_now()</button>
+    <button id="btn-scenario-consume">Scenario: consume_budget()</button>
+    <span>|</span>
+    <button id="btn-play-pause">Play</button>
+    <button id="btn-reset">Reset</button>
+    <span>|</span>
+    <label for="speed-slider">Speed:</label>
+    <input type="range" id="speed-slider" min="10" max="500" value="100" style="width: 100px;">
+    <span id="speed-value">100ms</span>
+</div>
+
+<div id="visualization"></div>
+
+<script>
+    const svgWidth = 900;
+    const svgHeight = 350;
+    const margin = { top: 40, right: 20, bottom: 20, left: 100 }; // Increased left margin for labels
+    const laneHeight = 50;
+    const taskHeight = 30;
+    const budgetHeight = 5;
+
+    const yWorker = margin.top;
+    const yReady = yWorker + laneHeight + 30;
+    const yWaiting = yReady + laneHeight + 30;
+
+    let currentTime = 0;
+    let tasks = [];
+    let scenario = 'none'; // 'none', 'yieldNow', 'consumeBudget'
+    let isRunning = false;
+    let simulationSpeed = 100; // ms per tick
+    let intervalId = null;
+    let workerBusy = false;
+    let runningTaskId = null;
+    let yieldMarkers = [];
+
+    const cpuTaskDuration = 150; // Total work units for CPU task
+    const ioTaskWork = 5;      // Work units for IO task when running
+    const ioTaskWait = 30;     // Wait units for IO task
+    const budgetMax = 25;      // Max budget units for consume_budget
+    const checkBudgetFrequency = 1; // How many work units before checking budget
+
+    const svg = d3.select("#visualization")
+        .append("svg")
+        .attr("width", svgWidth)
+        .attr("height", svgHeight);
+
+    // --- Static Elements ---
+
+    // Area Labels
+    svg.append("text")
+        .attr("x", margin.left / 2)
+        .attr("y", yWorker + laneHeight / 2)
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "central")
+        .attr("class", "area-label")
+        .text("Worker");
+
+     svg.append("text")
+        .attr("x", margin.left / 2)
+        .attr("y", yReady + laneHeight / 2)
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "central")
+        .attr("class", "area-label")
+        .text("Ready Q");
+
+    svg.append("text")
+        .attr("x", margin.left / 2)
+        .attr("y", yWaiting + laneHeight / 2)
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "central")
+        .attr("class", "area-label")
+        .text("Waiting");
+
+
+    // Worker Lane
+    svg.append("rect")
+        .attr("x", margin.left)
+        .attr("y", yWorker)
+        .attr("width", svgWidth - margin.left - margin.right)
+        .attr("height", laneHeight)
+        .attr("class", "worker-lane");
+
+    // Ready Queue Area (visual guide)
+    svg.append("rect")
+        .attr("x", margin.left)
+        .attr("y", yReady)
+        .attr("width", svgWidth - margin.left - margin.right)
+        .attr("height", laneHeight)
+        .attr("class", "ready-queue-area")
+        .style("opacity", 0.1);
+
+    // Waiting Area (visual guide)
+    svg.append("rect")
+        .attr("x", margin.left)
+        .attr("y", yWaiting)
+        .attr("width", svgWidth - margin.left - margin.right)
+        .attr("height", laneHeight)
+        .attr("class", "waiting-area")
+        .style("opacity", 0.1);
+
+    // Task container
+    const taskGroup = svg.append("g").attr("id", "tasks");
+    const yieldMarkerGroup = svg.append("g").attr("id", "yield-markers");
+
+    // --- Task Definitions ---
+    function createInitialTasks() {
+        tasks = [
+            {
+                id: 'cpu-0', type: 'cpu', state: 'ready',
+                x: 0, y: 0, // Position will be calculated
+                duration: cpuTaskDuration, workDone: 0,
+                readyTime: 0, // Becomes ready immediately
+                currentBudget: budgetMax, workSinceYield: 0,
+            },
+            {
+                id: 'io-0', type: 'io', state: 'ready',
+                x: 0, y: 0,
+                duration: ioTaskWork, workDone: 0, // Work when running
+                waitTime: ioTaskWait, waitProgress: 0, // Wait time when waiting
+                readyTime: 1, // Arrives slightly after CPU task
+                ioCycle: 0 // To track ping cycles
+            },
+             { // Add another IO task for more contention
+                id: 'io-1', type: 'io', state: 'ready',
+                x: 0, y: 0,
+                duration: ioTaskWork, workDone: 0,
+                waitTime: ioTaskWait, waitProgress: 0,
+                readyTime: 5, // Arrives a bit later
+                ioCycle: 0
+            }
+        ];
+        yieldMarkers = [];
+    }
+
+    // --- Simulation Logic ---
+    function tick() {
+        if (!isRunning) return;
+
+        currentTime++;
+        let didWork = false; // Track if any task actually ran
+
+        // --- Update Running Task ---
+        if (runningTaskId) {
+            const task = tasks.find(t => t.id === runningTaskId);
+            if (task) {
+                didWork = true; // The worker was busy
+                task.workDone++;
+
+                let shouldYield = false;
+                let yieldReason = '';
+
+                // Check if task finished its current compute block
+                if (task.type === 'cpu' && task.workDone >= task.duration) {
+                    task.state = 'finished';
+                    workerBusy = false;
+                    runningTaskId = null;
+                     console.log(`t=${currentTime}: Task ${task.id} FINISHED`);
+                } else if (task.type === 'io' && task.workDone >= task.duration) {
+                    task.state = 'waiting'; // IO task goes to wait after running
+                    task.workDone = 0; // Reset work for next run
+                    task.waitProgress = 0;
+                    workerBusy = false;
+                    runningTaskId = null;
+                     console.log(`t=${currentTime}: Task ${task.id} entering wait state`);
+                } else {
+                    // Check for yielding based on scenario
+                    if (task.type === 'cpu') { // Only CPU task yields based on strategy
+                        if (scenario === 'yieldNow') {
+                            shouldYield = true;
+                            yieldReason = 'yieldNow';
+                        } else if (scenario === 'consumeBudget') {
+                            task.workSinceYield++;
+                             // Check budget *conceptually* after each work unit here
+                             if (task.workSinceYield >= checkBudgetFrequency) {
+                                task.currentBudget -= task.workSinceYield; // Consume budget
+                                task.workSinceYield = 0; // Reset counter
+
+                                if (task.currentBudget <= 0) {
+                                     shouldYield = true;
+                                     yieldReason = 'consumeBudget';
+                                }
+                             }
+                        }
+                    }
+
+                     if (shouldYield && task.state === 'running') {
+                        task.state = 'ready';
+                        task.readyTime = currentTime; // Becomes ready now
+                        workerBusy = false;
+                        runningTaskId = null;
+                        if (scenario === 'consumeBudget') {
+                            task.currentBudget = budgetMax; // Replenish budget
+                            task.workSinceYield = 0;
+                        }
+                        // Record yield event for visualization
+                        yieldMarkers.push({ x: margin.left + task.x + task.currentWidth / 2, y: yWorker - 5, time: currentTime });
+                        console.log(`t=${currentTime}: Task ${task.id} YIELDED (${yieldReason})`);
+                    }
+                }
+            } else {
+                 runningTaskId = null; // Task not found? Clear state
+                 workerBusy = false;
+            }
+        }
+
+        // --- Update Waiting Tasks ---
+        tasks.filter(t => t.state === 'waiting').forEach(task => {
+            task.waitProgress++;
+            if (task.waitProgress >= task.waitTime) {
+                task.state = 'ready';
+                task.readyTime = currentTime;
+                task.waitProgress = 0;
+                task.ioCycle++; // Increment ping cycle counter
+                 console.log(`t=${currentTime}: Task ${task.id} finished waiting, now ready`);
+            }
+        });
+
+        // --- Schedule Ready Task ---
+        if (!workerBusy) {
+            // Find ready tasks, sort by ready time (simple FIFO)
+            const readyTasks = tasks.filter(t => t.state === 'ready')
+                                    .sort((a, b) => a.readyTime - b.readyTime);
+
+            if (readyTasks.length > 0) {
+                const nextTask = readyTasks[0];
+                nextTask.state = 'running';
+                workerBusy = true;
+                runningTaskId = nextTask.id;
+                 console.log(`t=${currentTime}: Task ${nextTask.id} starts RUNNING`);
+                // Reset budget if it's starting a new run in consumeBudget mode
+                if (nextTask.type === 'cpu' && scenario === 'consumeBudget') {
+                    nextTask.currentBudget = budgetMax;
+                    nextTask.workSinceYield = 0;
+                }
+            }
+        }
+
+        updateVisualization();
+
+        // Stop condition (example: all tasks finished or time limit)
+        if (tasks.every(t => t.state === 'finished') || currentTime > 1000) {
+            // Pause(); // Optional: Auto-pause when done
+            // console.log("Simulation ended.");
+        }
+    }
+
+    // --- Visualization Update ---
+    function updateVisualization() {
+        const t = d3.transition().duration(simulationSpeed * 0.8); // Smooth transition
+
+        let readyQueuePos = 0;
+        let waitingQueuePos = 0;
+
+        const taskSelection = taskGroup.selectAll("g.task-group")
+            .data(tasks.filter(d => d.state !== 'finished'), d => d.id); // Exclude finished tasks
+
+        // --- Enter ---
+        const taskEnter = taskSelection.enter()
+            .append("g")
+            .attr("class", "task-group")
+            .attr("transform", d => `translate(${margin.left}, ${getYPosition(d)})`); // Initial position
+
+        taskEnter.append("rect")
+            .attr("class", d => `task task-${d.type}`)
+            .attr("height", taskHeight)
+            .attr("width", 0); // Start width 0
+
+        taskEnter.append("rect") // Budget BG (always present, visibility toggled)
+            .attr("class", "budget-bg")
+            .attr("y", taskHeight - budgetHeight)
+            .attr("height", budgetHeight)
+            .attr("width", 0);
+
+         taskEnter.append("rect") // Budget FG
+            .attr("class", "budget-fg")
+            .attr("y", taskHeight - budgetHeight)
+            .attr("height", budgetHeight)
+            .attr("width", 0);
+
+        taskEnter.append("text")
+            .attr("class", "task-label")
+            .attr("x", 50 / 2) // Initial guess, updated in merge
+            .attr("y", taskHeight / 2)
+             .text(d => `${d.id.split('-')[0]} ${d.id.split('-')[1]}${d.type === 'io' ? ' (' + d.ioCycle + ')' : ''}`);
+
+
+        // --- Merge (Update + Enter) ---
+        taskSelection.merge(taskEnter)
+            .each(function(d) { // Calculate target positions and width FIRST
+                const taskWidth = calculateTaskWidth(d);
+                d.currentWidth = taskWidth; // Store for label positioning
+                d.targetX = getXPosition(d, readyQueuePos);
+                d.targetY = getYPosition(d);
+
+                if (d.state === 'ready') readyQueuePos++;
+                if (d.state === 'waiting') waitingQueuePos++;
+            })
+            .transition(t)
+            .attr("transform", d => `translate(${d.targetX}, ${d.targetY})`)
+            .select("rect.task") // Select the main task rect within the group
+            .attr("width", d => d.currentWidth);
+
+        // Update text and budget bars (no transition needed for text/budget content usually)
+        taskSelection.merge(taskEnter).select("text.task-label")
+              .attr("x", d => d.currentWidth / 2) // Center text
+              .text(d => `${d.id.split('-')[0]} ${d.id.split('-')[1]}${d.type === 'io' ? ' (' + d.ioCycle + ')' : ''}`);
+
+        taskSelection.merge(taskEnter).select("rect.budget-bg")
+             .attr("width", d => d.type === 'cpu' && scenario === 'consumeBudget' ? d.currentWidth : 0); // Show only in consumeBudget
+
+        taskSelection.merge(taskEnter).select("rect.budget-fg")
+            .attr("width", d => {
+                 if (d.type === 'cpu' && scenario === 'consumeBudget') {
+                    const budgetRatio = Math.max(0, d.currentBudget) / budgetMax;
+                    return d.currentWidth * budgetRatio;
+                 }
+                 return 0; // Hide otherwise
+            });
+
+
+        // --- Exit --- (Fade out finished tasks)
+        taskSelection.exit()
+             .transition(t)
+             .style("opacity", 0)
+             .remove();
+
+        // --- Update Yield Markers ---
+         const markerSelection = yieldMarkerGroup.selectAll("circle.yield-marker")
+            .data(yieldMarkers.filter(m => m.time === currentTime), (d, i) => `${d.time}-${i}`); // Key by time and index
+
+        markerSelection.enter()
+            .append("circle")
+            .attr("class", "yield-marker")
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y)
+            .attr("r", 0)
+            .transition().duration(200) // Pop in
+            .attr("r", 4)
+            .transition().delay(simulationSpeed * 2).duration(simulationSpeed * 3) // Fade out after a bit
+             .attr("r", 0)
+             .style("opacity", 0)
+            .remove(); // Remove from DOM after fading
+
+    }
+
+    function calculateTaskWidth(task) {
+         const minWidth = 40;
+         const maxWidth = 150;
+        if (task.state === 'running') {
+            if (task.type === 'cpu') {
+                 // Make width somewhat proportional to work, but cap it
+                 // In consumeBudget, maybe represent the budget cycle?
+                 if (scenario === 'consumeBudget') {
+                     // Width represents progress within the current budget
+                     const progress = Math.min(1, (budgetMax - Math.max(0,task.currentBudget)) / budgetMax );
+                     //return minWidth + (maxWidth - minWidth) * (task.workSinceYield / checkBudgetFrequency) ; // Alternative: width by work since check
+                    return minWidth + (maxWidth - minWidth) * progress;
+                 } else if (scenario === 'yieldNow') {
+                     return minWidth; // Short fixed width for yieldNow bursts
+                 } else { // No yield - grows longer
+                      return minWidth + (maxWidth - minWidth) * Math.min(1, task.workDone / 50); // Grow longer in no-yield
+                 }
+
+            } else { // IO Task running
+                return minWidth; // Fixed short width when running
+            }
+        } else if (task.state === 'waiting') {
+             return minWidth + (maxWidth - minWidth) * (task.waitProgress / task.waitTime); // Width indicates wait progress
+        } else if (task.state === 'ready') {
+            return minWidth; // Fixed width when ready
+        }
+        return 0; // Finished or other
+    }
+
+
+    function getXPosition(task, readyQueueIndex) {
+        const readyOffset = 5; // Spacing in ready queue
+        if (task.state === 'running') {
+            // Start position, doesn't move along time axis for simplicity here
+            // We could make it move with time, but makes overlaps complex
+             const taskData = tasks.find(t => t.id === task.id); // Get current data
+             return margin.left + 5; // Fixed start position when running
+        } else if (task.state === 'ready') {
+            return margin.left + readyQueueIndex * (calculateTaskWidth(task) + readyOffset);
+        } else if (task.state === 'waiting') {
+            return margin.left + 5; // Start of waiting area
+        }
+        return margin.left; // Default
+    }
+
+    function getYPosition(task) {
+         const centerOffset = (laneHeight - taskHeight) / 2;
+        if (task.state === 'running') {
+            return yWorker + centerOffset;
+        } else if (task.state === 'ready') {
+            return yReady + centerOffset;
+        } else if (task.state === 'waiting') {
+            return yWaiting + centerOffset;
+        }
+         return svgHeight + 50; // Offscreen if finished
+    }
+
+    // --- Controls ---
+    function PlayPause() {
+        isRunning = !isRunning;
+        d3.select("#btn-play-pause").text(isRunning ? "Pause" : "Play");
+        if (isRunning && !intervalId) {
+            intervalId = setInterval(tick, simulationSpeed);
+        } else if (!isRunning && intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
+    }
+
+    function Reset() {
+        if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
+        isRunning = false;
+        currentTime = 0;
+        workerBusy = false;
+        runningTaskId = null;
+        createInitialTasks();
+        updateVisualization(); // Reset visuals immediately
+        // Clear dynamic elements explicitly
+        taskGroup.selectAll("*").remove();
+        yieldMarkerGroup.selectAll("*").remove();
+        updateVisualization(); // redraw initial state
+        d3.select("#btn-play-pause").text("Play");
+    }
+
+    function setScenario(newScenario) {
+         scenario = newScenario;
+         console.log("Scenario set to:", scenario);
+         // Update button styles
+         d3.selectAll(".controls button[id^='btn-scenario-']").classed("active", false);
+         d3.select(`#btn-scenario-${scenario === 'none' ? 'none' : (scenario === 'yieldNow' ? 'yieldnow' : 'consume')}`).classed("active", true);
+         Reset(); // Reset simulation when changing scenario
+    }
+
+     d3.select("#btn-scenario-none").on("click", () => setScenario('none'));
+     d3.select("#btn-scenario-yieldnow").on("click", () => setScenario('yieldNow'));
+     d3.select("#btn-scenario-consume").on("click", () => setScenario('consumeBudget'));
+     d3.select("#btn-play-pause").on("click", PlayPause);
+     d3.select("#btn-reset").on("click", Reset);
+
+     d3.select("#speed-slider").on("input", function() {
+        simulationSpeed = +this.value;
+        d3.select("#speed-value").text(`${simulationSpeed}ms`);
+        if (isRunning) { // If running, restart interval with new speed
+            clearInterval(intervalId);
+            intervalId = setInterval(tick, simulationSpeed);
+        }
+    });
+
+    // --- Initial Setup ---
+    setScenario('none'); // Start with 'No Yield' scenario selected
+    createInitialTasks();
+    updateVisualization(); // Draw initial state
+
+</script>
+
+</body>
+</html>

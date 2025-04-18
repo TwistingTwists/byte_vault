@@ -1,0 +1,183 @@
+---
+slug: "CPU-intensive-tasks"
+title: "How to run CPU-intensive tasks in async Rust"
+date: 2025-04-18T00:00:00+00:00
+authors: [abeeshake] 
+tags: [ rust, tokio, async ]
+draft: true
+---
+import TldrTimeline from "../src/components/TldrCards/TldrTimeline";
+
+
+### TL;DR
+
+<TldrTimeline
+  steps={[
+    {
+      label: "Problem",
+      content: "Long-running, CPU-intensive code (loops, calculations) inside an async task can block the Tokio worker thread, preventing other tasks from running (task starvation). This happens because the task never hits an await point tied to I/O, which is Tokio's natural place to switch tasks."
+    },
+    {
+      label: "Solution",
+      content: "Call tokio::task::consume_budget().await periodically inside your long-running CPU-bound code."
+    },
+    {
+      label: "How it Works",
+      content: "This function tells Tokio, 'Hey, I've done a bit more work.' Tokio keeps an internal 'budget' for how much work a task can do before it should yield. consume_budget uses up a piece of that budget. Crucially, it only actually yields (pauses your task and lets others run) if the task has used up its entire budget."
+    },
+    {
+      label: "Benefit",
+      content: "Ensures fairness and responsiveness in your application by preventing any single CPU-heavy task from hogging resources, without unnecessarily yielding on every single check."
+    }
+  ]}
+/>
+
+{/* truncate */}
+
+
+## Don't Hog the CPU! Cooperative Yielding in Tokio with `consume_budget()`
+
+You're diving into the exciting world of asynchronous Rust with Tokio. You love how `async`/`await` makes concurrent code feel almost sequential, letting you juggle network requests, timers, and other I/O operations with ease. Tokio's runtime handles the magic of switching between tasks when they're waiting for something (like data from a socket).
+
+But what happens when a task isn't waiting for I/O? What if it's just busy... *thinking*? Crunching numbers, processing data in a tight loop? If it never `await`s, does it ever give other tasks a chance to run?
+
+This is where cooperative multitasking needs a little nudge, and Tokio provides a tool for precisely this scenario: `tokio::task::coop::consume_budget()`.
+
+
+
+### The Challenge: The Never-Ending Calculation
+
+Tokio uses a *cooperative* multitasking model. This means tasks are expected to "cooperate" by yielding control back to the Tokio runtime periodically, so the runtime can schedule other tasks.
+
+When you `await` an operation that involves waiting for something external (like network I/O using `tokio::net::TcpStream::read`, or waiting for a timer with `tokio::time::sleep`), your task naturally yields control. Tokio parks the task and switches to another ready task. When the I/O event completes, Tokio knows to wake your task up later.
+
+But consider this (simplified) scenario:
+
+```rust
+async fn process_large_data(data: &[u8]) -> u64 {
+    let mut digest = 0;
+    // Imagine this loop runs for a VERY long time on large data
+    for byte in data {
+        // Some complex, purely CPU-bound calculation
+        digest = digest.wrapping_add(calculate_complex_hash(*byte));
+    }
+    digest
+}
+
+// Elsewhere in your Tokio app:
+tokio::spawn(async move {
+    let result = process_large_data(&huge_data_slice).await;
+    println!("Processing done: {}", result);
+});
+
+tokio::spawn(async {
+    // Maybe this task needs to respond to network pings quickly!
+    respond_to_pings().await;
+});
+```
+
+If `process_large_data` runs for, say, 500 milliseconds without any `.await` calls inside its loop, the Tokio worker thread running it is completely occupied. The `respond_to_pings` task (and any others scheduled on the same thread) won't get a chance to run during that time. Your application might become unresponsive!
+
+### The Solution: Sharing the Budget with `consume_budget()`
+
+This is exactly the problem `tokio::task::consume_budget()` is designed to solve. It lets you insert *potential* yield points into your CPU-bound code.
+
+Let's look at the function signature and description again:
+
+```rust
+pub async fn consume_budget()
+// Available on crate feature rt only.
+
+// Consumes a unit of budget and returns the execution back to the Tokio
+// runtime if the task’s coop budget was exhausted.
+// The task will only yield if its entire coop budget has been exhausted.
+// ... insert optional yield points ... without redundantly yielding ...
+```
+
+Key takeaways:
+
+1.  **It's `async`:** You need to `.await` it.
+2.  **Budget-Based:** Tokio gives each task a "budget" of execution time before it *expects* it to yield. `consume_budget` deducts from this budget.
+3.  **Conditional Yielding:** This is the magic! It **doesn't** yield every time you call it. It only yields *if* the accumulated work (tracked by the budget) has exceeded Tokio's internal threshold. This avoids the overhead of yielding unnecessarily when the task hasn't been running for long yet.
+
+### Example: Making Iteration Cooperative
+
+The provided documentation gives a great example: processing an iterator that might have many items.
+
+```rust
+use tokio::task; // Make sure you have the `rt` feature enabled for Tokio
+
+async fn sum_iterator(input: &mut impl std::iter::Iterator<Item=i64>) -> i64 {
+    let mut sum: i64 = 0;
+    while let Some(i) = input.next() {
+        sum += i;
+        // Tell Tokio we did some work. Yield ONLY if our budget is used up.
+        task::consume_budget().await;
+    }
+    sum
+}
+
+// Example usage within a Tokio runtime
+#[tokio::main]
+async fn main() {
+    // Imagine this iterator could be very, very long
+    let mut numbers = (0..1_000_000_000).into_iter();
+
+    // Spawn the summing task
+    let sum_handle = tokio::spawn(async move {
+        println!("Summing started...");
+        let total = sum_iterator(&mut numbers).await;
+        println!("Summing finished: {}", total);
+        total
+    });
+
+    // Spawn another task to show it can run concurrently
+    let other_handle = tokio::spawn(async {
+        for i in 0..5 {
+            println!("Other task running...");
+            tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        }
+        println!("Other task finished.");
+    });
+
+    let _ = tokio::try_join!(sum_handle, other_handle);
+}
+```
+
+In this `sum_iterator` function, `task::consume_budget().await` is called in every iteration.
+
+*   If the iterator is short, the budget might never be exhausted, and the task might never yield within the loop. That's efficient!
+*   If the iterator is very long (like our `0..1_000_000_000` example), `consume_budget` will eventually find the budget exhausted after some number of iterations. At that point, the `.await` will pause `sum_iterator`, return control to the Tokio runtime, allowing the "Other task" (and any others) to run. Once other tasks have had a chance, Tokio will reschedule `sum_iterator` to continue where it left off, with a refreshed budget.
+
+### When Should You Use `consume_budget()`?
+
+Use it inside `async` functions when you have:
+
+1.  **Loops that run many times without awaiting I/O:** Iterating over large collections, complex simulations.
+2.  **Computationally expensive operations:** Complex algorithms, data transformations that take significant CPU time without needing to wait for external resources.
+
+Essentially, if you have code within an `async fn` that might run for a long time (think tens of milliseconds or more) without hitting a natural `await` point (like network or file I/O, timers, or channel operations), consider adding `consume_budget().await` inside its inner loop.
+
+### When *Not* to Use It
+
+*   If your loop already contains `.await` calls for Tokio I/O resources (sockets, channels, timers, semaphores), you likely don't need `consume_budget()`. Those `await`s already act as yield points.
+*   In short-running computations. Adding `consume_budget` adds a small overhead, so only use it where starvation is a real risk.
+*   In synchronous Rust code (outside of `async fn` or `tokio::spawn`). This is specifically a tool for Tokio's asynchronous runtime.
+
+### Quick Note: `rt` Feature Flag
+
+As the documentation mentions, `consume_budget` (and other task-related functions) requires the `rt` feature flag to be enabled for the `tokio` crate in your `Cargo.toml`. If you're using `#[tokio::main]` or the multi-threaded runtime (`rt-multi-thread`), this feature is typically enabled by default.
+
+```toml
+# Example Cargo.toml ensuring the feature is present
+[dependencies]
+tokio = { version = "1", features = ["full"] } # "full" includes "rt"
+# OR explicitly:
+# tokio = { version = "1", features = ["rt", "macros", ...] }
+```
+
+### Conclusion
+
+`tokio::task::coop::consume_budget()` is a vital tool for writing well-behaved, responsive asynchronous applications in Rust with Tokio. It provides a low-overhead way to ensure that CPU-bound tasks don't starve other tasks, allowing the Tokio runtime to efficiently manage concurrency even when tasks aren't waiting on I/O. By strategically placing `consume_budget().await` in your long-running computational loops, you keep your async application fair and snappy. Happy coding!
+
+---

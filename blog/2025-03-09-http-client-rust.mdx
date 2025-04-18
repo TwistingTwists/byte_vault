@@ -1,0 +1,127 @@
+---
+slug: "http-client-rust"
+title: "Versatile HTTP Client in Rust"
+date: 2025-03-09T00:00:00+00:00
+authors: [abeeshake] 
+tags: [ rust ]
+draft: true
+---
+
+
+
+- generate a summary of codebase
+- Generate title with framework (title, body summary, audience, rating, alex hormozi value framework)
+- 
+
+
+https://github.com/zed-industries/zed/blob/4846e6fb3ab046e3b746f442257adff6730a3187/crates/http_client/src/async_body.rs
+
+
+---- framework
+```
+title: "Sample Title"
+Body_summary: 
+ providing a generic HTTP client framework with features like redirects and proxy support.focuses on managing asynchronous request bodies for HTTP requests. It includes:Implementation of AsyncRead, ensuring the body can be read asynchronously, which is crucial for streaming data.
+Testing support with BlockedHttpClient, which always fails (useful for scenarios where network access is blocked), and FakeHttpClient, which allows mocking HTTP responses for testing purposes.
+
+
+audience: rust developers, curious engineers looking for leveling up the software skills
+
+
+When you generate the title for the blog, also analyse the value delivered using the following formula for value:
+
+Value = ( DreamOutcome x PerceivedLikelihood Of Achievement ) /  (time delay x effort and sacrifice)
+
+It consists of 4 variables.
+
+Value is directly proportional to  2 variables = DreamOutcome x PerceivedLikelihood Of Achievement.
+
+ANd Value is inversely proportional  to other two variables =  time delay x effort and sacrifice.
+
+Here is what those 4 variables in value equation mean.
+
+Dream outcome: What is the dream outcome that you want to achieve?
+
+Perceived likelihood of success: How likely do you think it is that you will achieve this outcome?
+
+Perceived time to success: How long do you think it will take to achieve this outcome?
+
+Perceived difficulty of success: How difficult do you think it will be to achieve this outcome?
+
+DO the value analysis of your title.
+
+For each of the variables above, generate a table with the following columns (and give numbers out of 5. larger  number indicates better outcome )
+dream outcome, Perceived likelihood of success, Perceived time to success, Perceived difficulty of success
+
+
+------
+this code compiles in baml. use it when you can.
+```ts
+
+class ContentAnalysis {
+  title string @description("Generated title for the content")
+  valueMetrics ValueAnalysis
+}
+
+class DreamClass {
+  score int @description("Score from 0-5")
+  reasoning string @description("Detailed explanation for the score")
+}
+
+class LikelihoodClass {
+  score int @description("Score from 0-5")
+  reasoning string @description("Supporting factors and explanation for confidence score")
+}
+
+class EffortClass {
+  score int @description("Score from 0-5")
+  reasoning string @description("Breakdown of effort requirements and justification")
+}
+
+class ValueAnalysis {
+  dreamOutcome DreamClass @description("Assessment of importance and benefit")
+  likelihood LikelihoodClass @description("Confidence assessment with reasoning")
+  timeDelay int @description("Estimated time required in days")
+  effort EffortClass @description("Effort level assessment with explanation")
+}
+
+function AnalyzeContentValue(content: string) -> ContentAnalysis[] {
+  client "openai/gpt-4o-mini"
+  prompt #"
+    You are an expert content strategist and business analyst. Analyze the given content to:
+    1. Generate an engaging, SEO-friendly title
+    2. Calculate the potential value using this formula:
+    Value = (DreamOutcome × Likelihood) / (TimeDelay × Effort)
+
+    Rate components on a scale of 0-5 (whole numbers only) except for timeDelay which is in days.
+    Consider audience impact, and increasing the value proposition in your analysis.
+
+    Give a list of 5 options for content and value proposition for each one in following format.
+    
+    {{ ctx.output_format }}
+
+    {{ _.role("user") }} {{ content }}
+  "#
+}
+
+test SimpleContent {
+  functions [AnalyzeContentValue]
+  args {
+    content "Building a new React component library with accessibility features and modern design patterns."
+  }
+}
+
+test TechnicalContent {
+  functions [AnalyzeContentValue]
+  args {
+    content #"
+      Building an HTTP client framework in Rust:
+      - Async request body handling
+      - Redirect and proxy support
+      - Test utilities including BlockedHttpClient and FakeHttpClient
+      Target audience: Rust developers and engineers interested in systems programming
+    "#
+  }
+}
+```
+```

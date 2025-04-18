@@ -18,7 +18,6 @@ rust:
   permalink: /rust
   description: Rust lang
 
-
 dist-sys:
   label: Distributed Systems
   permalink: /dist-sys
@@ -28,3 +27,68 @@ dsa:
   label: Data structured & Algorithms
   permalink: /dsa
   description: DSA
+
+tokio:
+  label: Tokio
+  permalink: /tokio
+  description: Tokio async runtime
+
+async:
+  label: Async
+  permalink: /async
+  description: Asynchronous programming
+
+elixir:
+  label: Elixir
+  permalink: /elixir
+  description: Elixir language
+
+parser-combinators:
+  label: Parser Combinators
+  permalink: /parser-combinators
+  description: Parsing with combinator libraries
+
+bash:
+  label: Bash
+  permalink: /bash
+  description: Bash scripting
+
+json-parser:
+  label: JSON Parser
+  permalink: /json-parser
+  description: Parsing JSON
+
+llm:
+  label: LLM
+  permalink: /llm
+  description: Large Language Models
+
+python:
+  label: Python
+  permalink: /python
+  description: Python language
+
+gvisor:
+  label: gVisor
+  permalink: /gvisor
+  description: gVisor sandbox
+
+connection:
+  label: Connection
+  permalink: /connection
+  description: Network connections
+
+database:
+  label: Database
+  permalink: /database
+  description: Database systems
+
+network:
+  label: Network
+  permalink: /network
+  description: Networking concepts
+
+writing:
+  label: Writing
+  permalink: /writing
+  description: Writing and publishing
