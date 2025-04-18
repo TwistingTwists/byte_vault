@@ -38,7 +38,10 @@ const config: Config = {
     defaultLocale: "en",
     locales: ["en"],
   },
-  plugins: [process.env.RSDOCTOR === "true" && ["rsdoctor", {}]],
+  plugins: [
+    process.env.RSDOCTOR === "true" && ["rsdoctor", {}],
+    "./src/plugins/tailwind-plugin.js",
+  ],
   presets: [
     [
       "classic",
@@ -162,7 +165,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+      copyright: `Copyright ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

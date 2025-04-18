@@ -1,0 +1,55 @@
+---
+slug: "connection-pooling-in-depth"
+title: "Connection Pooling - in Depth"
+date: 2025-03-13T00:00:00+00:00
+authors: [abeeshake] 
+tags: [ connection, database, network ]
+draft: false
+---
+
+Here’s a **Markdown table** that maps **real-life reverse proxy scenarios** to recommended **TCP tuning parameters** for optimal performance and security:
+
+---
+
+### ✅ **TCP Tuning Recommendations for Reverse Proxy - Real Life Scenarios**
+
+| **Scenario**                                  | **tcp_fin_timeout** | **tcp_keepalive_time** | **tcp_keepalive_intvl** | **tcp_keepalive_probes** | **tcp_retries2** | **Reasoning & Trade-offs**                                                                                   |
+|------------------------------------------------|---------------------|------------------------|-------------------------|--------------------------|------------------|--------------------------------------------------------------------------------------------------------------|
+| **Public API Gateway (high concurrent clients)** | `15`                | `30`                   | `10`                    | `3`                      | `5`              | Quick cleanup of dead/idle connections to save resources, while allowing short keep-alives for API clients.  |
+| **Internal microservices (low latency, stable network)** | `10`                | `60`                   | `20`                    | `3`                      | `3`              | Fast connection recycling, rare need for keep-alives due to low latency, prioritizing efficiency.             |
+| **Mobile-heavy client traffic (prone to network drops)** | `30`                | `120`                  | `20`                    | `5`                      | `7`              | More lenient timeouts to account for intermittent mobile network instability; avoid prematurely dropping clients. |
+| **WebSocket / long-lived connections (chat apps, gaming)** | `60`                | `300`                  | `60`                    | `5`                      | `8`              | Allow long idle connections; keep-alives to detect dead connections without cutting active clients abruptly.  |
+| **DDoS-prone public proxy (security-focused)**  | `5`                 | `30`                   | `5`                     | `2`                      | `3`              | Aggressive timeouts to prevent resource exhaustion; fast cleanup of potentially malicious connections.         |
+| **IoT Device Communication (sporadic, unstable)** | `30`                | `180`                  | `30`                    | `4`                      | `6`              | Longer keep-alives to maintain connection with low-power devices, balanced with cleanup to avoid idle hangs.  |
+| **Slow clients behind proxies (corporate clients, satellite)** | `20`                | `150`                  | `30`                    | `4`                      | `6`              | Moderate timeouts to handle slow networks without dropping legitimate users.                                  |
+
+---
+
+### ✅ **Legend (Quick Reference)**
+| **Parameter**                  | **Purpose**                                  |
+|-------------------------------|----------------------------------------------|
+| `tcp_fin_timeout`              | How long to keep closing connection in FIN state. |
+| `tcp_keepalive_time`           | Idle time before sending first keep-alive probe. |
+| `tcp_keepalive_intvl`          | Interval between successive keep-alive probes. |
+| `tcp_keepalive_probes`         | Number of probes before dropping connection.  |
+| `tcp_retries2`                 | Max TCP retransmissions before giving up.    |
+
+---
+
+### ⚙️ **Notes:**
+- **Lower timeouts**: Free up resources quickly, but risk dropping slow/legit connections.
+- **Higher timeouts**: Improve user experience over slow networks but consume more resources.
+- **Keep-alive settings**: Essential for long-lived or idle connections to detect dead peers.
+- **Retries**: Trade-off between network resilience and resource use.
+
+---
+
+If you want, I can prepare a **`sysctl.conf` file snippet** based on any of these scenarios for direct use. Let me know! 🚀
+
+
+
+----
+
+source: https://github.com/brettwooldridge/HikariCP/wiki/Down-the-Rabbit-Hole
+
+----
