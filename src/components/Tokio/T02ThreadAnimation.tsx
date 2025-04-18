@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import confetti from 'canvas-confetti';
 
 interface SimulationState {
   cpuCores: number;
@@ -27,6 +28,8 @@ const ThreadResourceHtopVisualization: React.FC = () => {
   const [isAnimating, setIsAnimating] = useState<boolean>(false);
   const [simulationSpeed, setSimulationSpeed] = useState<number>(1);
   const [dataPoints, setDataPoints] = useState<DataPoint[]>([]);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const [simulationState, setSimulationState] = useState<SimulationState>({
     cpuCores: 8,
     cpuUsage: [5, 3, 4, 2, 5, 3, 2, 4],
@@ -187,6 +190,26 @@ const ThreadResourceHtopVisualization: React.FC = () => {
     setDataPoints([]);
   };
   
+  const handleStartSimulation = () => {
+    if (!isAnimating) {
+      // Trigger confetti from the button position
+      const buttonElement = buttonRef.current;
+      if (buttonElement) {
+        const rect = buttonElement.getBoundingClientRect();
+        const x = (rect.left + rect.width / 2) / window.innerWidth;
+        const y = (rect.top + rect.height / 2) / window.innerHeight;
+        
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { x, y },
+          colors: ['#22c55e', '#3b82f6', '#64748b', '#ef4444', '#a855f7'],
+        });
+      }
+    }
+    setIsAnimating(!isAnimating);
+  };
+
   const formatNumber = (num: number): string => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
@@ -364,16 +387,64 @@ const ThreadResourceHtopVisualization: React.FC = () => {
         <h3 className="text-lg font-bold">Thread-Per-Connection Resource Monitor</h3>
         <div className="flex gap-4">
           <button 
-            onClick={() => setIsAnimating(!isAnimating)} 
-            className={`px-4 py-2 rounded font-medium ${isAnimating ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}
+            ref={buttonRef}
+            onClick={handleStartSimulation}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className={`
+              px-6 py-3 rounded-lg font-medium text-white
+              shadow-lg transform transition-all duration-200
+              ${isAnimating 
+                ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' 
+                : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+              }
+              ${isHovered ? 'scale-105 -translate-y-0.5' : ''}
+              active:scale-95 active:shadow-md
+              border border-white/10
+              hover:shadow-xl
+              hover:border-white/20
+            `}
           >
-            {isAnimating ? 'Stop' : 'Start'} Load Simulation
+            <span className="flex items-center gap-2">
+              {isAnimating ? (
+                <>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Stop Simulation
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Start Simulation
+                </>
+              )}
+            </span>
           </button>
           <button 
-            onClick={handleReset} 
-            className="px-4 py-2 bg-gray-500 text-white rounded font-medium"
+            onClick={handleReset}
+            className="
+              px-6 py-3 rounded-lg font-medium
+              bg-gradient-to-r from-gray-600 to-gray-700
+              text-white shadow-lg
+              transform transition-all duration-200
+              hover:from-gray-700 hover:to-gray-800
+              hover:scale-105 hover:-translate-y-0.5
+              hover:shadow-xl
+              active:scale-95 active:shadow-md
+              border border-white/10
+              hover:border-white/20
+            "
           >
-            Reset
+            <span className="flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Reset
+            </span>
           </button>
         </div>
       </div>

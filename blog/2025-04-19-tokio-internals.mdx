@@ -7,11 +7,8 @@ tags: [ rust, tokio, async ]
 draft: false
 ---
 
-
-{/* // import {ThreadResourceVisualization} from "../src/components/Tokio/ThreadResourceViz"; */}
-{/*  import ThreadResourceHtopVisualization from "../src/components/Tokio/T01ThreadAnimation"; */}
-
 import ThreadResourceHtopVisualization from "../src/components/Tokio/T02ThreadAnimation";
+import LearningObjective from "../src/components/LearningObjective";
 
 # Visualizing Tokio Internals: The Journey Begins
 
@@ -19,7 +16,14 @@ This document explores the fundamental concepts behind Tokio's executor, startin
 
 {/* truncate */}
 
-## Phase 0: The Problem - Why Async? Why Tokio?
+## Phase 0: The Problem
+
+<LearningObjective question="Why do we need async runtimes like Tokio?">
+  - **Resource Efficiency:** Traditional thread-per-connection models waste system resources
+  - **Scalability:** Async enables handling thousands of connections with minimal overhead
+  - **Performance:** Event-driven architecture reduces context switching and memory usage
+  - **Cost-Effective:** Better resource utilization means lower infrastructure costs
+</LearningObjective>
 
 Modern applications, especially network services, need to handle many things concurrently. Imagine a web server handling thousands of client connections simultaneously.
 
