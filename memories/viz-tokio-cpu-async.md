@@ -313,3 +313,5 @@ Okay, let's outline how we could visualize the concepts using D3.js. The goal is
 
 This visualization would effectively demonstrate *why* `consume_budget` is often preferred: it prevents starvation like `yield_now` but does so more efficiently by avoiding unnecessary context switches.
 ```
+
+https://aistudio.google.com/prompts/1TNC1HaFG_pcKCQU3mI9R0ZEDr0QFWh9K

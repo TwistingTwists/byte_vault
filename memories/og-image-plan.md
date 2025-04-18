@@ -106,8 +106,11 @@ function detectAndExtractComponents(content) {
 5. Test with various blog post formats
 6. Add to CI/CD pipeline
 
-## Resources
 
-- Satori: https://github.com/vercel/satori
-- Resvg: https://github.com/yisibl/resvg-js
-- Docusaurus plugins: https://docusaurus.io/docs/api/plugins
+
+
+
+
+LINKS 
+
+https://www.perplexity.ai/search/build-time-og-image-generation-nbqfj0T4QTueuEy51t4POg
