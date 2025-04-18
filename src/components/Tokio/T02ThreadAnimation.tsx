@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, JSX } from 'react';
 import confetti from 'canvas-confetti';
 
 interface SimulationState {
@@ -237,7 +237,7 @@ const ThreadResourceHtopVisualization: React.FC = () => {
           d={createPath('cpuAverage')} 
           fill="none" 
           stroke="#22c55e" 
-          strokeWidth="1.5"
+          strokeWidth="0.7"
         />
         
         {/* Memory curve (blue) */}
@@ -245,7 +245,7 @@ const ThreadResourceHtopVisualization: React.FC = () => {
           d={createPath('memoryUsage')} 
           fill="none" 
           stroke="#3b82f6" 
-          strokeWidth="1.5"
+          strokeWidth="0.7"
         />
         
         {/* Thread count curve (gray) */}
@@ -253,7 +253,7 @@ const ThreadResourceHtopVisualization: React.FC = () => {
           d={createPath('threadCountPercentage')} 
           fill="none" 
           stroke="#64748b" 
-          strokeWidth="1.5"
+          strokeWidth="0.7"
         />
         
         {/* Throughput curve (red) */}
@@ -261,7 +261,7 @@ const ThreadResourceHtopVisualization: React.FC = () => {
           d={createPath('throughputPercentage')} 
           fill="none" 
           stroke="#ef4444" 
-          strokeWidth="1.5"
+          strokeWidth="0.7"
         />
         
         {/* Queue size curve (purple) */}
@@ -269,49 +269,49 @@ const ThreadResourceHtopVisualization: React.FC = () => {
           d={createPath('queuePercentage')} 
           fill="none" 
           stroke="#a855f7" 
-          strokeWidth="1.5"
+          strokeWidth="0.7"
         />
       </svg>
     );
   };
   
   return (
-    <div className="visualization-container bg-gray-100 p-6 rounded-lg shadow-md space-y-6">
+    <div className="visualization-container bg-gray-100 dark:bg-gray-900 p-6 rounded-lg shadow-md space-y-6">
       {/* htop-like display */}
-      <div className="bg-black text-green-400 p-4 rounded font-mono text-sm h-64 overflow-y-auto">
+      <div className="bg-black dark:bg-gray-800 text-green-400 dark:text-green-300 p-4 rounded font-mono text-sm h-64 overflow-y-auto">
         <div className="mb-2">
-          <span className="text-blue-400">htop - </span>
-          <span className="text-white">Thread-Per-Connection Server</span>
+          <span className="text-blue-400 dark:text-blue-300">htop - </span>
+          <span className="text-white dark:text-gray-100">Thread-Per-Connection Server</span>
         </div>
         
         <div className="mb-4">
           <div className="flex justify-between mb-1">
             <span>Active Connections:</span>
-            <span className={connectionCount > 500 ? 'text-red-500' : connectionCount > 100 ? 'text-yellow-400' : ''}>{formatNumber(connectionCount)}</span>
+            <span className={connectionCount > 500 ? 'text-red-500' : connectionCount > 100 ? 'text-yellow-400 dark:text-yellow-300' : ''}>{formatNumber(connectionCount)}</span>
           </div>
           <div className="flex justify-between mb-1">
             <span>Threads:</span>
-            <span className={simulationState.threadCount > 1000 ? 'text-red-500' : simulationState.threadCount > 200 ? 'text-yellow-400' : ''}>{formatNumber(simulationState.threadCount)}</span>
+            <span className={simulationState.threadCount > 1000 ? 'text-red-500' : simulationState.threadCount > 200 ? 'text-yellow-400 dark:text-yellow-300' : ''}>{formatNumber(simulationState.threadCount)}</span>
           </div>
           <div className="flex justify-between mb-1">
             <span>Requests/sec:</span>
-            <span className={simulationState.requestsPerSecond < simulationState.threadCount / 5 ? 'text-red-500' : simulationState.requestsPerSecond < simulationState.threadCount / 2 ? 'text-yellow-400' : 'text-green-300'}>{formatNumber(simulationState.requestsPerSecond)}</span>
+            <span className={simulationState.requestsPerSecond < simulationState.threadCount / 5 ? 'text-red-500' : simulationState.requestsPerSecond < simulationState.threadCount / 2 ? 'text-yellow-400 dark:text-yellow-300' : 'text-green-300 dark:text-green-400'}>{formatNumber(simulationState.requestsPerSecond)}</span>
           </div>
           <div className="flex justify-between mb-1">
             <span>Request Queue:</span>
-            <span className={simulationState.queueSize > 100 ? 'text-red-500' : simulationState.queueSize > 20 ? 'text-yellow-400' : ''}>{formatNumber(simulationState.queueSize)}</span>
+            <span className={simulationState.queueSize > 100 ? 'text-red-500' : simulationState.queueSize > 20 ? 'text-yellow-400 dark:text-yellow-300' : ''}>{formatNumber(simulationState.queueSize)}</span>
           </div>
         </div>
         
         <div className="mb-4">
-          <div className="text-white mb-1">CPU Usage</div>
+          <div className="text-white dark:text-gray-100 mb-1">CPU Usage</div>
           {simulationState.cpuUsage.map((usage, index) => (
             <div key={index} className="mb-2">
               <div className="flex items-center justify-between">
                 <span className="w-12">{`CPU ${index}`}</span>
-                <div className="w-full bg-gray-700 h-4 ml-2 mr-2 rounded-sm">
+                <div className="w-full bg-gray-700 dark:bg-gray-600 h-4 ml-2 mr-2 rounded-sm">
                   <div 
-                    className={`h-full rounded-sm ${usage > 90 ? 'bg-red-500' : usage > 70 ? 'bg-yellow-400' : 'bg-green-500'}`} 
+                    className={`h-full rounded-sm ${usage > 90 ? 'bg-red-500' : usage > 70 ? 'bg-yellow-400 dark:bg-yellow-300' : 'bg-green-500 dark:bg-green-400'}`} 
                     style={{ width: `${usage}%` }}
                   ></div>
                 </div>
@@ -321,9 +321,9 @@ const ThreadResourceHtopVisualization: React.FC = () => {
           ))}
           <div className="flex items-center justify-between mt-1">
             <span className="w-12">Average:</span>
-            <div className="w-full bg-gray-700 h-4 ml-2 mr-2 rounded-sm">
+            <div className="w-full bg-gray-700 dark:bg-gray-600 h-4 ml-2 mr-2 rounded-sm">
               <div 
-                className={`h-full rounded-sm ${simulationState.cpuAverage > 90 ? 'bg-red-500' : simulationState.cpuAverage > 70 ? 'bg-yellow-400' : 'bg-green-500'}`} 
+                className={`h-full rounded-sm ${simulationState.cpuAverage > 90 ? 'bg-red-500' : simulationState.cpuAverage > 70 ? 'bg-yellow-400 dark:bg-yellow-300' : 'bg-green-500 dark:bg-green-400'}`} 
                 style={{ width: `${simulationState.cpuAverage}%` }}
               ></div>
             </div>
@@ -332,12 +332,12 @@ const ThreadResourceHtopVisualization: React.FC = () => {
         </div>
         
         <div className="mb-4">
-          <div className="text-white mb-1">Memory Usage</div>
+          <div className="text-white dark:text-gray-100 mb-1">Memory Usage</div>
           <div className="flex items-center justify-between">
             <span className="w-12">Mem</span>
-            <div className="w-full bg-gray-700 h-4 ml-2 mr-2 rounded-sm">
+            <div className="w-full bg-gray-700 dark:bg-gray-600 h-4 ml-2 mr-2 rounded-sm">
               <div 
-                className={`h-full rounded-sm ${simulationState.memoryUsage > 90 ? 'bg-red-500' : simulationState.memoryUsage > 70 ? 'bg-yellow-400' : 'bg-blue-500'}`} 
+                className={`h-full rounded-sm ${simulationState.memoryUsage > 90 ? 'bg-red-500' : simulationState.memoryUsage > 70 ? 'bg-yellow-400 dark:bg-yellow-300' : 'bg-blue-500 dark:bg-blue-400'}`} 
                 style={{ width: `${simulationState.memoryUsage}%` }}
               ></div>
             </div>
@@ -347,8 +347,8 @@ const ThreadResourceHtopVisualization: React.FC = () => {
         
         {/* Thread List */}
         <div>
-          <div className="text-white mb-1">Top Threads</div>
-          <div className="grid grid-cols-12 text-xs mb-1 border-b border-gray-700">
+          <div className="text-white dark:text-gray-100 mb-1">Top Threads</div>
+          <div className="grid grid-cols-12 text-xs mb-1 border-b border-gray-700 dark:border-gray-600">
             <div className="col-span-1">PID</div>
             <div className="col-span-3">USER</div>
             <div className="col-span-1">PR</div>
@@ -375,7 +375,7 @@ const ThreadResourceHtopVisualization: React.FC = () => {
             })
           }
           {simulationState.threadCount > 10 && (
-            <div className="text-gray-500 text-xs mt-1">
+            <div className="text-gray-500 dark:text-gray-400 text-xs mt-1">
               ... and {formatNumber(simulationState.threadCount - 10)} more threads
             </div>
           )}
@@ -384,7 +384,7 @@ const ThreadResourceHtopVisualization: React.FC = () => {
       
       {/* Controls */}
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-bold">Thread-Per-Connection Resource Monitor</h3>
+        <h3 className="text-lg font-bold dark:text-gray-100">Thread-Per-Connection Resource Monitor</h3>
         <div className="flex gap-4">
           <button 
             ref={buttonRef}
@@ -403,6 +403,7 @@ const ThreadResourceHtopVisualization: React.FC = () => {
               border border-white/10
               hover:shadow-xl
               hover:border-white/20
+              dark:border-white/20
             `}
           >
             <span className="flex items-center gap-2">
@@ -437,6 +438,7 @@ const ThreadResourceHtopVisualization: React.FC = () => {
               active:scale-95 active:shadow-md
               border border-white/10
               hover:border-white/20
+              dark:border-white/20
             "
           >
             <span className="flex items-center gap-2">
@@ -450,10 +452,10 @@ const ThreadResourceHtopVisualization: React.FC = () => {
       </div>
       
       {/* Chart and controls */}
-      <div className="bg-white p-4 rounded shadow space-y-6">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded shadow space-y-6">
         {/* Manual connection slider */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
             Simulate Connection Load
           </label>
           <div className="flex gap-4 items-center">
@@ -468,13 +470,13 @@ const ThreadResourceHtopVisualization: React.FC = () => {
               }}
               className="w-full"
             />
-            <span className="text-sm font-mono bg-gray-100 p-1 rounded">{formatNumber(connectionCount)}</span>
+            <span className="text-sm font-mono bg-gray-100 dark:bg-gray-900 dark:text-gray-100 p-1 rounded">{formatNumber(connectionCount)}</span>
           </div>
         </div>
         
         {/* Simulation speed control */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
             Simulation Speed
           </label>
           <div className="flex gap-4 items-center">
@@ -489,16 +491,16 @@ const ThreadResourceHtopVisualization: React.FC = () => {
               className="w-full"
             />
             <span className="text-xs">Fast</span>
-            <span className="text-sm font-mono bg-gray-100 p-1 rounded">{simulationSpeed}x</span>
+            <span className="text-sm font-mono bg-gray-100 dark:bg-gray-900 dark:text-gray-100 p-1 rounded">{simulationSpeed}x</span>
           </div>
         </div>
         
         {/* Graph of key metrics */}
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Performance Impact</h4>
-          <div className="relative h-64 border border-gray-300 rounded p-2">
+          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Performance Impact</h4>
+          <div className="relative h-64 border border-gray-300 dark:border-gray-600 rounded p-2">
             {/* X axis */}
-            <div className="absolute bottom-0 left-0 right-0 border-t border-gray-300 flex justify-between px-2 text-xs text-gray-500">
+            <div className="absolute bottom-0 left-0 right-0 border-t border-gray-300 dark:border-gray-600 flex justify-between px-2 text-xs text-gray-500 dark:text-gray-400">
               <div>0</div>
               <div>500</div>
               <div>1,000</div>
@@ -508,7 +510,7 @@ const ThreadResourceHtopVisualization: React.FC = () => {
             
             {/* Y axis label */}
             <div className="absolute left-0 top-0 bottom-10 flex items-center">
-              <div className="transform -rotate-90 text-xs text-gray-500 whitespace-nowrap">Resource Utilization (%)</div>
+              <div className="transform -rotate-90 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Resource Utilization (%)</div>
             </div>
             
             {/* Connection marker */}
@@ -526,25 +528,25 @@ const ThreadResourceHtopVisualization: React.FC = () => {
             </div>
             
             {/* Legend */}
-            <div className="absolute top-2 right-2 bg-white/80 p-2 rounded text-xs space-y-1">
+            <div className="absolute top-2 right-2 bg-white/80 dark:bg-gray-900/80 p-2 rounded text-xs space-y-1">
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-green-500 mr-2"></div>
+                <div className="w-3 h-3 bg-green-500 dark:bg-green-400 mr-2"></div>
                 <div>CPU Usage</div>
               </div>
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-blue-500 mr-2"></div>
+                <div className="w-3 h-3 bg-blue-500 dark:bg-blue-400 mr-2"></div>
                 <div>Memory Usage</div>
               </div>
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-gray-500 mr-2"></div>
+                <div className="w-3 h-3 bg-gray-500 dark:bg-gray-400 mr-2"></div>
                 <div>Thread Count</div>
               </div>
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-red-500 mr-2"></div>
+                <div className="w-3 h-3 bg-red-500 dark:bg-red-400 mr-2"></div>
                 <div>Throughput</div>
               </div>
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-purple-500 mr-2"></div>
+                <div className="w-3 h-3 bg-purple-500 dark:bg-purple-400 mr-2"></div>
                 <div>Request Queue</div>
               </div>
             </div>
@@ -552,24 +554,24 @@ const ThreadResourceHtopVisualization: React.FC = () => {
         </div>
         
         {/* Key observations */}
-        <div className={`p-3 rounded ${connectionCount > 500 ? 'bg-red-100' : connectionCount > 100 ? 'bg-yellow-100' : 'bg-green-100'}`}>
-          <h4 className="font-medium mb-1">System Status:</h4>
+        <div className={`p-3 rounded ${connectionCount > 500 ? 'bg-red-100 dark:bg-red-900' : connectionCount > 100 ? 'bg-yellow-100 dark:bg-yellow-900' : 'bg-green-100 dark:bg-green-900'}`}>
+          <h4 className="font-medium mb-1 dark:text-gray-100">System Status:</h4>
           {connectionCount <= 50 && (
-            <p className="text-sm">System is handling connections efficiently. Resources are well-utilized with minimal overhead.</p>
+            <p className="text-sm dark:text-gray-200">System is handling connections efficiently. Resources are well-utilized with minimal overhead.</p>
           )}
           {connectionCount > 50 && connectionCount <= 300 && (
-            <p className="text-sm">System load increasing. Thread creation is consuming memory and CPU resources.</p>
+            <p className="text-sm dark:text-gray-200">System load increasing. Thread creation is consuming memory and CPU resources.</p>
           )}
           {connectionCount > 300 && connectionCount <= 800 && (
-            <p className="text-sm">Warning: High thread count causing significant context switching overhead. Throughput is plateauing despite increasing resource consumption.</p>
+            <p className="text-sm dark:text-gray-200">Warning: High thread count causing significant context switching overhead. Throughput is plateauing despite increasing resource consumption.</p>
           )}
           {connectionCount > 800 && (
-            <p className="text-sm">Critical: System is overwhelmed with threads. Context switching overhead is degrading performance. Throughput is decreasing despite increased resource usage. Request queue is growing rapidly.</p>
+            <p className="text-sm dark:text-gray-200">Critical: System is overwhelmed with threads. Context switching overhead is degrading performance. Throughput is decreasing despite increased resource usage. Request queue is growing rapidly.</p>
           )}
         </div>
       </div>
       
-      <div className="text-center text-sm text-gray-600">
+      <div className="text-center text-sm text-gray-600 dark:text-gray-300">
         <strong>Figure 1:</strong> Interactive visualization of thread-per-connection scaling issues. As connection count increases, 
         resources are consumed by thread overhead, while throughput plateaus and then declines due to context switching costs.
       </div>

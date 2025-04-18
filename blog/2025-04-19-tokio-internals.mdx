@@ -9,6 +9,7 @@ draft: false
 
 import ThreadResourceHtopVisualization from "../src/components/Tokio/T02ThreadAnimation";
 import LearningObjective from "../src/components/LearningObjective";
+import CollapsibleSection from "../src/components/CollapsibleSection";
 
 # Visualizing Tokio Internals: The Journey Begins
 
@@ -33,28 +34,29 @@ A naive approach is to dedicate one Operating System (OS) thread to each connect
 
 **Goal:** Show resource consumption (CPU/Memory) and throughput limits of a blocking thread-per-connection model.
 
-**Description:**
+<CollapsibleSection summary="How a thread-per-connection server behaves as load increases">
+  **Description:**
 
-Imagine a dashboard resembling `htop` or Task Manager:
+  Imagine a dashboard resembling `htop` or Task Manager:
 
-1.  **CPU Usage:** Bars representing individual CPU cores.
-2.  **Memory Usage:** A single bar showing total RAM consumption.
-3.  **Active Threads:** A counter or list showing running OS threads.
-4.  **Requests/Second:** A throughput meter.
-5.  **Incoming Requests Queue:** A visual queue of pending connections.
+  1.  **CPU Usage:** Bars representing individual CPU cores.
+  2.  **Memory Usage:** A single bar showing total RAM consumption.
+  3.  **Active Threads:** A counter or list showing running OS threads.
+  4.  **Requests/Second:** A throughput meter.
+  5.  **Incoming Requests Queue:** A visual queue of pending connections.
 
-**Simulation:**
+  **Simulation:**
 
-*   **Start:** The server starts. CPU/Memory usage is low. Throughput is 0. Few base threads exist.
-*   **Low Load:** Simulate a few incoming connections (~10). For each, a new OS thread is created.
-    *   *Visual:* Active Threads count increases slightly. Memory usage ticks up slightly. CPU usage might blip as threads start but stays relatively low if connections are mostly idle. Throughput matches the request rate.
-*   **High Load:** Simulate hundreds or thousands of incoming connections. Many connections involve waiting for network I/O (reading request body, waiting for database, sending response).
-    *   *Visual:*
-        *   **Active Threads:** The count explodes. Each thread requires kernel resources and its own stack (~MBs).
-        *   **Memory Usage:** The Memory bar shoots up dramatically, potentially hitting system limits.
-        *   **CPU Usage:** CPU bars likely thrash. Even if threads are mostly *waiting* (blocked on I/O), the OS spends significant time *context switching* between them. This is overhead, not useful work.
-        *   **Requests Queue:** The incoming requests queue grows rapidly because threads are created, but many quickly block on I/O. The server struggles to accept new connections.
-        *   **Requests/Second:** The throughput meter hits a plateau far below the incoming request rate, possibly even decreasing as context-switching overhead dominates.
+  *   **Start:** The server starts. CPU/Memory usage is low. Throughput is 0. Few base threads exist.
+  *   **Low Load:** Simulate a few incoming connections (~10). For each, a new OS thread is created.
+      *   *Visual:* Active Threads count increases slightly. Memory usage ticks up slightly. CPU usage might blip as threads start but stays relatively low if connections are mostly idle. Throughput matches the request rate.
+  *   **High Load:** Simulate hundreds or thousands of incoming connections. Many connections involve waiting for network I/O (reading request body, waiting for database, sending response).
+      *   *Visual:*
+          *   **Active Threads:** The count explodes. Each thread requires kernel resources and its own stack (~MBs).
+          *   **Memory Usage:** The Memory bar shoots up dramatically, potentially hitting system limits.
+          *   **CPU Usage:** CPU bars likely thrash. Even if threads are mostly *waiting* (blocked on I/O), the OS spends significant time *context switching* between them. This is overhead, not useful work.
+          *   **Requests Queue:** The incoming requests queue grows rapidly because threads are created, but many quickly block on I/O. The server struggles to accept new connections.
+          *   **Requests/Second:** The throughput meter hits a plateau far below the incoming request rate, possibly even decreasing as context-switching overhead dominates.
+</CollapsibleSection>
 
-{/* <ThreadResourceVisualization /> */}
 <ThreadResourceHtopVisualization />
