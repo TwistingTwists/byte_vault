@@ -9,12 +9,12 @@ const LearningObjective: React.FC<LearningObjectiveProps> = ({ question, childre
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="my-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl overflow-hidden">
-      <div className="p-6 space-y-4">
-        <div className="flex items-start gap-4">
-          <div className="flex-shrink-0 p-3 bg-blue-100 rounded-lg">
+    <div className="my-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg overflow-hidden shadow-sm">
+      <div className="p-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0 p-2 bg-blue-100 rounded-md">
             <svg 
-              className="w-6 h-6 text-blue-600" 
+              className="w-4 h-4 text-blue-600" 
               fill="none" 
               viewBox="0 0 24 24" 
               stroke="currentColor"
@@ -28,53 +28,51 @@ const LearningObjective: React.FC<LearningObjectiveProps> = ({ question, childre
             </svg>
           </div>
           <div className="flex-grow">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              After reading this, you will be able to answer:
+            <h3 className="text-sm font-medium text-gray-700">
+              After reading this section:
             </h3>
-            <p className="text-xl font-medium text-blue-900">
+            <p className="text-base font-medium text-blue-900">
               {question}
             </p>
           </div>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="
+              flex items-center gap-1 px-2 py-1
+              text-xs font-medium text-blue-600
+              hover:text-blue-800
+              transition-colors duration-200
+              focus:outline-none
+            "
+          >
+            {isExpanded ? (
+              <>
+                Hide
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              </>
+            ) : (
+              <>
+                Show
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </>
+            )}
+          </button>
         </div>
         
         <div 
           className={`
-            transition-all duration-500 ease-in-out 
-            ${isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
+            overflow-hidden transition-all duration-300 ease-in-out
+            ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}
           `}
         >
-          <div className="pt-4 border-t border-blue-100">
+          <div className="pt-2 border-t border-blue-100 text-sm text-gray-700">
             {children}
           </div>
         </div>
-
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="
-            inline-flex items-center gap-2 px-4 py-2
-            text-sm font-medium text-blue-700
-            bg-blue-100 rounded-lg
-            transition-all duration-200
-            hover:bg-blue-200
-            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-          "
-        >
-          {isExpanded ? (
-            <>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
-              Hide Answer
-            </>
-          ) : (
-            <>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-              Show Answer
-            </>
-          )}
-        </button>
       </div>
     </div>
   );
