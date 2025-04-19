@@ -7,7 +7,7 @@ tags: [ rust, tokio, async , eventloop]
 draft: true
 ---
 
-import DirtyReadVisualization from "../src/components/Database/DirtyReads03";
+import DirtyReadsTimeline from "../src/components/Database/DirtyReadsTimeline";
 
 # Understanding Dirty Reads: A Database Isolation Problem
 
@@ -77,8 +77,7 @@ If **T2** had rolled back instead of committing, **T1** would have read a value 
 
 The animation below demonstrates this scenario step-by-step. You can see how the database and transactions interact, and exactly when the dirty read occurs.
 
-<DirtyReadVisualization />
-
+<DirtyReadsTimeline />
 ---
 
 ## Conclusion
