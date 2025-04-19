@@ -12,7 +12,14 @@ import LearningObjective from "../src/components/LearningObjective";
 import SimpleAccordion from "../src/components/SimpleAccordion";
 import Insight from "../src/components/Insight"; // Assuming Insight is imported from here
 
-# Prelude
+
+
+import TOCInline from '@theme/TOCInline';
+
+<TOCInline toc={toc} />
+
+
+## Prelude
 This is the first post in a four part series that will provide an understanding of the mechanics behind the Tokio runtime in Rust. This post focuses on the challenges in a multi-threaded event loop that force us to think of async runtimes like Tokio.
 
 Index of the four part series:
@@ -22,7 +29,7 @@ Index of the four part series:
 3. Visualizing Tokio Internals: Part III - Wakers
 4. Visualizing Tokio Internals: Part IV - Executors
 
-# Multi-Threaded Event Loop / Server
+## Multi-Threaded Event Loop / Server
 
 What challenges in a multi-threaded event loop force us to think of async runtimes like Tokio?
 

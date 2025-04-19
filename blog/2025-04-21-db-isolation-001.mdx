@@ -7,11 +7,16 @@ tags: [ rust, tokio, async , eventloop]
 draft: true
 ---
 
+
+import TOCInline from '@theme/TOCInline';
+
+<TOCInline toc={toc} />
+
 import DirtyReadsTimeline from "../src/components/Database/DirtyReadsTimeline";
 
-# Understanding Dirty Reads: A Database Isolation Problem
+## Understanding Dirty Reads: A Database Isolation Problem
 
-## What is a Dirty Read?
+### What is a Dirty Read?
 
 A **dirty read** occurs when a transaction reads data that has been written by another transaction but not yet committed. If the writing transaction rolls back, the data read by the first transaction becomes invalid—hence, "dirty."
 
@@ -20,11 +25,11 @@ This can lead to inconsistent or incorrect results in applications, especially i
 {/* truncate */}
 ---
 
-## Example Scenario
+### Example Scenario
 
 Let's walk through a concrete example to see how a dirty read can happen.
 
-### Initial Database State
+#### Initial Database State
 
 Suppose we have a simple database table:
 
