@@ -555,7 +555,13 @@ const ThreadResourceHtopVisualization: React.FC = () => {
         </div>
         
         {/* Key observations */}
-        <div className={`p-3 rounded ${connectionCount > 500 ? 'bg-red-100 dark:bg-red-900' : connectionCount > 100 ? 'bg-yellow-100 dark:bg-yellow-900' : 'bg-green-100 dark:bg-green-900'}`}>
+        <div className={`p-3 rounded border-2
+          ${connectionCount > 500 
+            ? 'bg-red-100 dark:bg-red-900 border-red-300 dark:border-red-700' 
+            : connectionCount > 100 
+              ? 'bg-yellow-100 dark:bg-yellow-900 border-yellow-300 dark:border-yellow-700' 
+              : 'bg-green-100 dark:bg-green-900 border-green-300 dark:border-green-700'}
+        `}>
           <h4 className="font-medium mb-1 dark:text-gray-100">System Status:</h4>
           {connectionCount <= 50 && (
             <p className="text-sm dark:text-gray-200">System is handling connections efficiently. Resources are well-utilized with minimal overhead.</p>
