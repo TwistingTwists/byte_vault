@@ -141,7 +141,7 @@ const ThreadResourceHtopVisualization: React.FC = () => {
         }
         
         const newCount = prev + increment;
-        return Math.min(Math.floor(newCount), 2000);
+        return Math.min(Math.floor(newCount), 500);
       });
       
       // Schedule next frame based on speed
@@ -217,7 +217,7 @@ const ThreadResourceHtopVisualization: React.FC = () => {
   const renderGraph = (): JSX.Element | null => {
     if (dataPoints.length < 2) return null;
     
-    const maxConnections = 2000;
+    const maxConnections = 500;
     const graphWidth = 100;
     const graphHeight = 100;
     
@@ -462,7 +462,7 @@ const ThreadResourceHtopVisualization: React.FC = () => {
             <input 
               type="range" 
               min="1" 
-              max="2000" 
+              max="500" 
               value={connectionCount}
               onChange={(e) => {
                 setIsAnimating(false);
@@ -502,10 +502,11 @@ const ThreadResourceHtopVisualization: React.FC = () => {
             {/* X axis */}
             <div className="absolute bottom-0 left-0 right-0 border-t border-gray-300 dark:border-gray-600 flex justify-between px-2 text-xs text-gray-500 dark:text-gray-400">
               <div>0</div>
+              <div>100</div>
+              <div>200</div>
+              <div>300</div>
+              <div>400</div>
               <div>500</div>
-              <div>1,000</div>
-              <div>1,500</div>
-              <div>2,000</div>
             </div>
             
             {/* Y axis label */}
@@ -517,7 +518,7 @@ const ThreadResourceHtopVisualization: React.FC = () => {
             <div 
               className="absolute bottom-0 w-0.5 bg-red-500 h-full opacity-50"
               style={{ 
-                left: `${(connectionCount / 2000) * 100}%`,
+                left: `${(connectionCount / 500) * 100}%`,
                 height: 'calc(100% - 15px)'
               }}
             ></div>
@@ -554,7 +555,13 @@ const ThreadResourceHtopVisualization: React.FC = () => {
         </div>
         
         {/* Key observations */}
-        <div className={`p-3 rounded ${connectionCount > 500 ? 'bg-red-100 dark:bg-red-900' : connectionCount > 100 ? 'bg-yellow-100 dark:bg-yellow-900' : 'bg-green-100 dark:bg-green-900'}`}>
+        <div className={`p-3 rounded border-2
+          ${connectionCount > 500 
+            ? 'bg-red-100 dark:bg-red-900 border-red-300 dark:border-red-700' 
+            : connectionCount > 100 
+              ? 'bg-yellow-100 dark:bg-yellow-900 border-yellow-300 dark:border-yellow-700' 
+              : 'bg-green-100 dark:bg-green-900 border-green-300 dark:border-green-700'}
+        `}>
           <h4 className="font-medium mb-1 dark:text-gray-100">System Status:</h4>
           {connectionCount <= 50 && (
             <p className="text-sm dark:text-gray-200">System is handling connections efficiently. Resources are well-utilized with minimal overhead.</p>

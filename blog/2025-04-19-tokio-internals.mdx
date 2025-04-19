@@ -1,62 +1,86 @@
 ---
 slug: "tokio-internals-visualised"
-title: "Understanding Eventloops by visualisation"
+title: "Understanding Eventloops (Tokio Internals)"
 date: 2025-04-19T00:00:00+00:00
 authors: [abeeshake] 
-tags: [ rust, tokio, async ]
+tags: [ rust, tokio, async , eventloop]
 draft: false
 ---
 
 import ThreadResourceHtopVisualization from "../src/components/Tokio/T02ThreadAnimation";
 import LearningObjective from "../src/components/LearningObjective";
-import CollapsibleSection from "../src/components/CollapsibleSection";
+import SimpleAccordion from "../src/components/SimpleAccordion";
+import Insight from "../src/components/Insight"; // Assuming Insight is imported from here
 
-# Visualizing Tokio Internals: The Journey Begins
+# Prelude
+This is the first post in a four part series that will provide an understanding of the mechanics behind the Tokio runtime in Rust. This post focuses on the challenges in a multi-threaded event loop that force us to think of async runtimes like Tokio.
 
-This document explores the fundamental concepts behind Tokio's executor, starting with *why* we need systems like Tokio and gradually building up the core components. We'll use descriptions of visualizations to make these ideas concrete.
+Index of the four part series:
 
-{/* truncate */}
+1. Visualizing Tokio Internals: Part I - Multi-Threaded Event Loop / Server
+2. Visualizing Tokio Internals: Part II - Reactor
+3. Visualizing Tokio Internals: Part III - Wakers
+4. Visualizing Tokio Internals: Part IV - Executors
+
+# Multi-Threaded Event Loop / Server
+
+What challenges in a multi-threaded event loop force us to think of async runtimes like Tokio?
+
 
 ## Phase 0: The Problem
 
-<LearningObjective question="Why do we need async runtimes like Tokio?">
+<LearningObjective 
+  question="Why do we need async runtimes like Tokio?"
+  id="why-tokio"
+>
   - **Resource Efficiency:** Traditional thread-per-connection models waste system resources
   - **Scalability:** Async enables handling thousands of connections with minimal overhead
   - **Performance:** Event-driven architecture reduces context switching and memory usage
   - **Cost-Effective:** Better resource utilization means lower infrastructure costs
 </LearningObjective>
 
+{/* truncate */}
+
 Modern applications, especially network services, need to handle many things concurrently. Imagine a web server handling thousands of client connections simultaneously.
 
 A naive approach is to dedicate one Operating System (OS) thread to each connection. Let's see why this doesn't scale well.
 
-### Visualization 1: The Thread-Per-Connection Resource Drain
+### The Thread-Per-Connection Resource Drain
 
-**Goal:** Show resource consumption (CPU/Memory) and throughput limits of a blocking thread-per-connection model.
+The visualization below shows resource consumption (CPU/Memory) and throughput limits of a blocking thread-per-connection model.
 
-<CollapsibleSection summary="How a thread-per-connection server behaves as load increases">
+
+<SimpleAccordion 
+  summary="How a thread-per-connection server behaves as load increases"
+  id="thread-per-connection"
+  className="mb-4"
+>
   **Description:**
 
   Imagine a dashboard resembling `htop` or Task Manager:
 
-  1.  **CPU Usage:** Bars representing individual CPU cores.
-  2.  **Memory Usage:** A single bar showing total RAM consumption.
-  3.  **Active Threads:** A counter or list showing running OS threads.
-  4.  **Requests/Second:** A throughput meter.
-  5.  **Incoming Requests Queue:** A visual queue of pending connections.
+  1. **CPU Usage:** Bars representing individual CPU cores.
+  2. **Memory Usage:** A single bar showing total RAM consumption.
+  3. **Active Threads:** A counter or list showing running OS threads.
+  4. **Requests/Second:** A throughput meter.
+  5. **Incoming Requests Queue:** A visual queue of pending connections.
 
   **Simulation:**
 
-  *   **Start:** The server starts. CPU/Memory usage is low. Throughput is 0. Few base threads exist.
-  *   **Low Load:** Simulate a few incoming connections (~10). For each, a new OS thread is created.
-      *   *Visual:* Active Threads count increases slightly. Memory usage ticks up slightly. CPU usage might blip as threads start but stays relatively low if connections are mostly idle. Throughput matches the request rate.
-  *   **High Load:** Simulate hundreds or thousands of incoming connections. Many connections involve waiting for network I/O (reading request body, waiting for database, sending response).
-      *   *Visual:*
-          *   **Active Threads:** The count explodes. Each thread requires kernel resources and its own stack (~MBs).
-          *   **Memory Usage:** The Memory bar shoots up dramatically, potentially hitting system limits.
-          *   **CPU Usage:** CPU bars likely thrash. Even if threads are mostly *waiting* (blocked on I/O), the OS spends significant time *context switching* between them. This is overhead, not useful work.
-          *   **Requests Queue:** The incoming requests queue grows rapidly because threads are created, but many quickly block on I/O. The server struggles to accept new connections.
-          *   **Requests/Second:** The throughput meter hits a plateau far below the incoming request rate, possibly even decreasing as context-switching overhead dominates.
-</CollapsibleSection>
+  - **Start:** The server starts. CPU/Memory usage is low. Throughput is 0. Few base threads exist.
+  - **Low Load:** Simulate a few incoming connections (~10). For each, a new OS thread is created.
+    - *Visual:* Active Threads count increases slightly. Memory usage ticks up slightly. CPU usage might blip as threads start but stays relatively low if connections are mostly idle. Throughput matches the request rate.
+  - **High Load:** Simulate hundreds or thousands of incoming connections. Many connections involve waiting for network I/O (reading request body, waiting for database, sending response).
+    - *Visual:*
+      - **Active Threads:** The count explodes. Each thread requires kernel resources and its own stack (~MBs).
+      - **Memory Usage:** The Memory bar shoots up dramatically, potentially hitting system limits.
+      - **CPU Usage:** CPU bars likely thrash. Even if threads are mostly *waiting* (blocked on I/O), the OS spends significant time *context switching* between them. This is overhead, not useful work.
+      - **Requests Queue:** The incoming requests queue grows rapidly because threads are created, but many quickly block on I/O. The server struggles to accept new connections.
+      - **Requests/Second:** The throughput meter hits a plateau far below the incoming request rate, possibly even decreasing as context-switching overhead dominates.
+</SimpleAccordion>
 
-<ThreadResourceHtopVisualization />
+<ThreadResourceHtopVisualization className="mt-8" />
+
+<Insight>
+  We need a way to handle multiple waiting tasks concurrently without needing a dedicated OS thread for each one <em>while it's waiting</em>. This leads to asynchronous programming.
+</Insight>

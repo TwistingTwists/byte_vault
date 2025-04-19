@@ -38,6 +38,11 @@ async:
   permalink: /async
   description: Asynchronous programming
 
+eventloop:
+  label: Event Loop
+  permalink: /eventloop
+  description: Event loop
+
 elixir:
   label: Elixir
   permalink: /elixir

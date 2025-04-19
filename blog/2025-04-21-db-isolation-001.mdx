@@ -1,0 +1,87 @@
+---
+slug: "database-isolation-visualised-dirty-reads"
+title: "Database Isolation (dirty reads)"
+date: 2025-04-21T00:00:00+00:00
+authors: [abeeshake] 
+tags: [ rust, tokio, async , eventloop]
+draft: true
+---
+
+import DirtyReadsTimeline from "../src/components/Database/DirtyReadsTimeline";
+
+# Understanding Dirty Reads: A Database Isolation Problem
+
+## What is a Dirty Read?
+
+A **dirty read** occurs when a transaction reads data that has been written by another transaction but not yet committed. If the writing transaction rolls back, the data read by the first transaction becomes invalid—hence, "dirty."
+
+This can lead to inconsistent or incorrect results in applications, especially in systems where multiple users or processes are accessing and modifying the data concurrently.
+
+{/* truncate */}
+---
+
+## Example Scenario
+
+Let's walk through a concrete example to see how a dirty read can happen.
+
+### Initial Database State
+
+Suppose we have a simple database table:
+
+| key  | value    |
+| ---- | -------- |
+| name | abhishek |
+| age  | 42       |
+
+Two transactions, **T1** and **T2**, will interact with the `name` row.
+
+---
+
+### Step-by-Step: Dirty Read in Action
+
+#### 1. T1 Reads the Original Value
+
+- **T1** starts and reads the value of `name`.
+- It sees:  
+  `name = 'abhishek'` (the committed value).
+
+#### 2. T2 Updates the Value (But Doesn't Commit)
+
+- **T2** starts and updates `name` to `'john'`.
+- This change is **not yet committed** to the database.
+- Other transactions should ideally not see this uncommitted value.
+
+#### 3. T1 Reads Again (Dirty Read!)
+
+- **T1** reads the value of `name` again.
+- **Because the database isolation level is low (e.g., READ UNCOMMITTED), T1 sees `name = 'john'`**, even though T2 hasn't committed.
+- This is a **dirty read**: T1 is reading data that might be rolled back.
+
+#### 4. T2 Commits
+
+- **T2** now commits its change.
+- `name = 'john'` is now the official, permanent value.
+
+#### 5. T1 Commits
+
+- **T1** commits, possibly basing its logic on the dirty value it read earlier.
+
+---
+
+## Why is This a Problem?
+
+If **T2** had rolled back instead of committing, **T1** would have read a value that never officially existed in the database. This can cause application bugs, data corruption, or security issues.
+
+---
+
+## Visualizing the Dirty Read
+
+The animation below demonstrates this scenario step-by-step. You can see how the database and transactions interact, and exactly when the dirty read occurs.
+
+<DirtyReadsTimeline />
+---
+
+## Conclusion
+
+Dirty reads are a classic example of why database isolation levels matter. By default, most production databases avoid dirty reads by using stricter isolation (like READ COMMITTED or higher). However, understanding this scenario helps you appreciate the trade-offs between performance and consistency in concurrent systems.
+ 

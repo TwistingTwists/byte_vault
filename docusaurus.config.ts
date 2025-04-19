@@ -47,6 +47,7 @@ const config: Config = {
       "classic",
       {
         docs: false,
+      
         // docs: {
         //   sidebarPath: './sidebars.ts',
         //   // Please change this to your repo.
@@ -59,6 +60,7 @@ const config: Config = {
           anonymizeIP: false,
         },
         blog: {
+          routeBasePath: '/', // Serve the blog at the site's root
           showReadingTime: true,
           feedOptions: {
             type: ["rss", "atom"],
@@ -81,6 +83,8 @@ const config: Config = {
           onInlineAuthors: "warn",
           onUntruncatedBlogPosts: "warn",
           remarkPlugins: [remarkGfm],
+          blogSidebarTitle: 'All posts',
+          blogSidebarCount: 'ALL',
           // feed generator
           // include: ['**/*.{md,mdx}'],
           // exclude: [
@@ -101,6 +105,17 @@ const config: Config = {
   themeConfig: {
     // Replace with your project's social card
     image: "img/docusaurus-social-card.jpg",
+    // docs:{
+    //   sidebar: {
+    //     hideable: true,
+    //     autoCollapseCategories: true ,
+    //   },
+    // },
+    blog: {
+      sidebar: {
+        groupByYear: true,
+      },
+    },
     navbar: {
       title: "Byte Vault",
       logo: {
@@ -114,9 +129,9 @@ const config: Config = {
         //   position: 'left',
         //   label: 'Tutorial',
         // },
-        { to: "/blog", label: "Blog", position: "left" },
+        { to: "/", label: "Blog", position: "left" },
         {
-          href: "https://github.com/facebook/docusaurus",
+          href: "https://github.com/TwistingTwists/bytevault",
           label: "GitHub",
           position: "right",
         },
@@ -134,23 +149,23 @@ const config: Config = {
         //     },
         //   ],
         // },
-        {
-          title: "Community",
-          items: [
-            {
-              label: "Stack Overflow",
-              href: "https://stackoverflow.com/questions/tagged/docusaurus",
-            },
-            {
-              label: "Discord",
-              href: "https://discordapp.com/invite/docusaurus",
-            },
-            {
-              label: "X",
-              href: "https://x.com/docusaurus",
-            },
-          ],
-        },
+        // {
+          // title: "Community",
+          // items: [
+          //   {
+          //     label: "Stack Overflow",
+          //     href: "https://stackoverflow.com/questions/tagged/docusaurus",
+          //   },
+          //   {
+          //     label: "Discord",
+          //     href: "https://discordapp.com/invite/docusaurus",
+          //   },
+          //   {
+          //     label: "X",
+          //     href: "https://x.com/docusaurus",
+          //   },
+          // ],
+        // },
         {
           title: "More",
           items: [
@@ -160,12 +175,12 @@ const config: Config = {
             },
             {
               label: "GitHub",
-              href: "https://github.com/facebook/docusaurus",
+              href: "https://github.com/TwistingTwists/bytevault",
             },
           ],
         },
       ],
-      copyright: `Copyright ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+      copyright: `Copyright ${new Date().getFullYear()} Abhishek Tripathi`,
     },
     prism: {
       theme: prismThemes.github,

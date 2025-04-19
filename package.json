@@ -21,15 +21,18 @@
     "@docusaurus/preset-classic": "^3.7.0",
     "@docusaurus/theme-mermaid": "^3.7.0",
     "@mdx-js/react": "^3.1.0",
+    "@react-three/drei": "^10.0.6",
+    "@react-three/fiber": "^9.1.2",
     "@types/d3": "^7.4.3",
     "canvas-confetti": "^1.9.3",
     "clsx": "^2.0.0",
     "d3": "^7.9.0",
     "prism-react-renderer": "^2.3.0",
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "react-markdown": "^9.0.1",
-    "remark-gfm": "^4.0.0"
+    "remark-gfm": "^4.0.0",
+    "three": "^0.175.0"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.7.0",

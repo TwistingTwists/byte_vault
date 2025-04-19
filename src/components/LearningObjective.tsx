@@ -3,13 +3,21 @@ import React, { useState } from 'react';
 interface LearningObjectiveProps {
   question: string;
   children: React.ReactNode;
+  id?: string;
+  defaultExpanded?: boolean;
 }
 
-const LearningObjective: React.FC<LearningObjectiveProps> = ({ question, children }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+const LearningObjective: React.FC<LearningObjectiveProps> = ({ 
+  question, 
+  children, 
+  id = `learning-objective-${question}`,
+  defaultExpanded = false
+}) => {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const toggle = () => setIsExpanded(prev => !prev);
 
   return (
-    <div className="my-3 sm:my-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg overflow-hidden shadow-sm dark:shadow-blue-900/5">
+    <div className="my-3 sm:my-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg overflow-hidden shadow-sm dark:shadow-blue-900/5 border-l-4 border-blue-400 dark:border-blue-600">
       <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
         <div className="flex flex-wrap sm:flex-nowrap items-start sm:items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
@@ -42,7 +50,8 @@ const LearningObjective: React.FC<LearningObjectiveProps> = ({ question, childre
             </div>
           </div>
           <button
-            onClick={() => setIsExpanded(!isExpanded)}
+            id={`${id}-button`}
+            onClick={toggle}
             className="
               flex items-center gap-1 px-2 py-1 ml-auto
               text-2xs sm:text-xs font-medium text-blue-600 dark:text-blue-400
@@ -50,6 +59,8 @@ const LearningObjective: React.FC<LearningObjectiveProps> = ({ question, childre
               transition-colors duration-200
               focus:outline-none
             "
+            aria-expanded={isExpanded}
+            aria-controls={id}
           >
             {isExpanded ? (
               <>
@@ -70,6 +81,9 @@ const LearningObjective: React.FC<LearningObjectiveProps> = ({ question, childre
         </div>
         
         <div 
+          id={id}
+          role="region"
+          aria-labelledby={`${id}-button`}
           className={`
             overflow-hidden transition-all duration-300 ease-in-out
             ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}
