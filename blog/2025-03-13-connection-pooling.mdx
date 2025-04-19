@@ -9,6 +9,17 @@ draft: false
 
 Here’s a **Markdown table** that maps **real-life reverse proxy scenarios** to recommended **TCP tuning parameters** for optimal performance and security:
 
+### ✅ **Legend (Quick Reference)**
+| **Parameter**                  | **Purpose**                                  |
+|-------------------------------|----------------------------------------------|
+| `tcp_fin_timeout`              | How long to keep closing connection in FIN state. |
+| `tcp_keepalive_time`           | Idle time before sending first keep-alive probe. |
+| `tcp_keepalive_intvl`          | Interval between successive keep-alive probes. |
+| `tcp_keepalive_probes`         | Number of probes before dropping connection.  |
+| `tcp_retries2`                 | Max TCP retransmissions before giving up.    |
+
+{/* truncate */}
+
 ---
 
 ### ✅ **TCP Tuning Recommendations for Reverse Proxy - Real Life Scenarios**
@@ -22,17 +33,6 @@ Here’s a **Markdown table** that maps **real-life reverse proxy scenarios** to
 | **DDoS-prone public proxy (security-focused)**  | `5`                 | `30`                   | `5`                     | `2`                      | `3`              | Aggressive timeouts to prevent resource exhaustion; fast cleanup of potentially malicious connections.         |
 | **IoT Device Communication (sporadic, unstable)** | `30`                | `180`                  | `30`                    | `4`                      | `6`              | Longer keep-alives to maintain connection with low-power devices, balanced with cleanup to avoid idle hangs.  |
 | **Slow clients behind proxies (corporate clients, satellite)** | `20`                | `150`                  | `30`                    | `4`                      | `6`              | Moderate timeouts to handle slow networks without dropping legitimate users.                                  |
-
----
-
-### ✅ **Legend (Quick Reference)**
-| **Parameter**                  | **Purpose**                                  |
-|-------------------------------|----------------------------------------------|
-| `tcp_fin_timeout`              | How long to keep closing connection in FIN state. |
-| `tcp_keepalive_time`           | Idle time before sending first keep-alive probe. |
-| `tcp_keepalive_intvl`          | Interval between successive keep-alive probes. |
-| `tcp_keepalive_probes`         | Number of probes before dropping connection.  |
-| `tcp_retries2`                 | Max TCP retransmissions before giving up.    |
 
 ---
 
