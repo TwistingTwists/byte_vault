@@ -17,7 +17,6 @@ interface TimelineVisualizationProps {
   title?: string;
   layout?: 'absolute' | 'proportional';
   showConcurrencyLines?: boolean;
-  labelStyle?: 'html' | 'shader';
   theme?: TimelineTheme;
   onEventClick?: (event: TimelineEvent) => void;
 }
@@ -28,7 +27,6 @@ const TimelineVisualization: React.FC<TimelineVisualizationProps> = ({
   title = "Transaction Timeline",
   layout = 'proportional',
   showConcurrencyLines = true,
-  labelStyle = 'shader',
   theme = {
     background: '#111827',
     t1Color: '#06b6d4',
@@ -46,6 +44,7 @@ const TimelineVisualization: React.FC<TimelineVisualizationProps> = ({
   const raycaster = useRef(new THREE.Raycaster());
   const mouse = useRef(new THREE.Vector2());
   const { currentStep, totalSteps } = animationState;
+  let hoveredShaderLabelIndex: number | null = null;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -129,7 +128,7 @@ const TimelineVisualization: React.FC<TimelineVisualizationProps> = ({
       const t1Mesh = new THREE.Mesh(t1ProgressGeometry, t1ProgressMaterial);
       t1Mesh.position.set(-(6 - t1Width/2), 2, 0.05);
       t1Mesh.userData = { type: 'progress', tx: 'T1' };
-      const t1Glow = new THREE.PointLight(theme.t1Color, 3, 3);
+      const t1Glow = new THREE.PointLight(theme.t1Color, 2, 1.5);
       t1Glow.position.set(-(6 - t1Width), 2, 0.5);
       t1Glow.userData = { type: 'progress', tx: 'T1-glow' };
       scene.add(t1Mesh);
@@ -140,7 +139,7 @@ const TimelineVisualization: React.FC<TimelineVisualizationProps> = ({
       const t2Mesh = new THREE.Mesh(t2ProgressGeometry, t2ProgressMaterial);
       t2Mesh.position.set(-(6 - t2Width/2), -2, 0.05);
       t2Mesh.userData = { type: 'progress', tx: 'T2' };
-      const t2Glow = new THREE.PointLight(theme.t2Color, 3, 3);
+      const t2Glow = new THREE.PointLight(theme.t2Color, 2, 1.5);
       t2Glow.position.set(-(6 - t2Width), -2, 0.5);
       t2Glow.userData = { type: 'progress', tx: 'T2-glow' };
       scene.add(t2Mesh);
@@ -187,7 +186,8 @@ const TimelineVisualization: React.FC<TimelineVisualizationProps> = ({
             scene.add(pulse);
           }
         }
-        if (event.tx) {
+        // Only add connectors for events with a transaction (T1 or T2)
+        if (event.tx && event.action !== "Initial State") {
           const lineHeight = 4;
           const lineGeometry = new THREE.BoxGeometry(0.02, lineHeight, 0.05);
           const lineMaterial = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3 });
@@ -199,171 +199,6 @@ const TimelineVisualization: React.FC<TimelineVisualizationProps> = ({
       });
     }
   };
-
-  const eventConnectorsSystem = {
-    update: (scene: THREE.Scene, events: TimelineEvent[], currentStep: number, totalSteps: number) => {
-      scene.children.filter(child => child.userData.type === 'event-connector').forEach(obj => scene.remove(obj));
-      events.forEach((event, index) => {
-        if (event.tx) {
-          const positionX = calculateEventPosition(event, events, totalSteps);
-          const lineHeight = 4;
-          let color = theme.systemColor;
-          if (event.tx === 'T1') color = theme.t1Color;
-          if (event.tx === 'T2') color = theme.t2Color;
-          if (event.highlight) color = theme.highlightColor;
-          const lineGeometry = new THREE.BoxGeometry(0.02, lineHeight, 0.05);
-          const lineMaterial = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3 });
-          const line = new THREE.Mesh(lineGeometry, lineMaterial);
-          line.position.set(positionX, event.tx === 'T1' ? 0 : 0, 0.1);
-          line.userData = { type: 'event-connector', eventIndex: index };
-          scene.add(line);
-        }
-      });
-    }
-  };
-
-  const eventLabelsSystem = {
-    render: (events: TimelineEvent[], currentStep: number, totalSteps: number, title: string) => {
-      return (
-        <>
-          <h3 className="absolute top-2 left-4 text-xl font-bold text-white mb-4 pb-2 border-b border-gray-600/50 z-10">{title}</h3>
-          <div className="absolute top-1/3 left-6 -translate-y-1/2 text-sm font-medium text-cyan-400/90 px-2 py-1 rounded-md bg-cyan-950/30 border border-cyan-500/20 shadow-sm z-10">T1</div>
-          <div className="absolute top-2/3 left-6 -translate-y-1/2 text-sm font-medium text-orange-400/90 px-2 py-1 rounded-md bg-orange-950/30 border border-orange-500/20 shadow-sm z-10">T2</div>
-          {events.map((event, index) => {
-            const positionX = calculateEventPosition(event, events, totalSteps);
-            const yClass = event.tx === 'T1' ? 'bottom-10' : 'top-10';
-            return (
-              <div key={index} className={`absolute left-0 top-1/2 transform -translate-y-1/2 z-20 pointer-events-none`} style={{ left: `${16 + (positionX * 0.68)}%` }}>
-                <div className={`max-w-40 whitespace-nowrap text-xs font-medium px-2.5 py-1.5 rounded-lg ${yClass} bg-gray-900/60 border border-gray-500/50 shadow-lg transition-all duration-300 absolute`} style={{ overflow: 'hidden', textOverflow: 'ellipsis', transform: 'translateX(-50%)', textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}>{event.action}</div>
-              </div>
-            );
-          })}
-        </>
-      );
-    }
-  };
-
-  const createShaderLabelMaterial = (baseTexture: THREE.Texture, glowColor: THREE.Color, glowIntensity: number) => {
-    return new THREE.ShaderMaterial({
-      uniforms: {
-        baseTexture: { value: baseTexture },
-        glowColor: { value: glowColor },
-        glowIntensity: { value: glowIntensity },
-        time: { value: 0.0 }
-      },
-      vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform sampler2D baseTexture;
-        uniform vec3 glowColor;
-        uniform float glowIntensity;
-        uniform float time;
-        varying vec2 vUv;
-        void main() {
-          vec4 texColor = texture2D(baseTexture, vUv);
-          gl_FragColor = texColor;
-          if (glowIntensity > 0.0) {
-            float pulseFactor = 0.5 + 0.5 * sin(time * 3.0);
-            vec3 glow = glowColor * glowIntensity * pulseFactor;
-            gl_FragColor.rgb += glow * texColor.a;
-          }
-        }
-      `,
-      transparent: true,
-      side: THREE.DoubleSide
-    });
-  };
-
-  const shaderLabelsSystem = (() => {
-    let labelGroup: THREE.Group | null = null;
-    let lastRenderer: THREE.WebGLRenderer | null = null;
-    let lastCamera: THREE.Camera | null = null;
-
-    const animate = (time: number) => {
-      if (!labelGroup || !lastCamera) return;
-      labelGroup.children.forEach(label => {
-        const mesh = label as THREE.Mesh;
-        mesh.quaternion.copy(lastCamera.quaternion);
-        if ((mesh.material as any).uniforms) {
-          (mesh.material as any).uniforms.time.value = time / 1000;
-        }
-        if (mesh.userData.animation) {
-          const animation = mesh.userData.animation;
-          if (animation.pulsate) {
-            const scale = 1 + 0.1 * Math.sin(time / 500);
-            mesh.scale.set(scale, scale, 1);
-          }
-          if (animation.fade) {
-            (mesh.material as any).opacity = 0.5 + 0.5 * Math.sin(time / 700);
-          }
-        }
-      });
-    };
-
-    const update = (scene: THREE.Scene, renderer: THREE.WebGLRenderer, camera: THREE.Camera, events: TimelineEvent[], currentStep: number, totalSteps: number) => {
-      if (!labelGroup) {
-        labelGroup = new THREE.Group();
-        scene.add(labelGroup);
-      }
-      lastRenderer = renderer;
-      lastCamera = camera;
-      while (labelGroup.children.length) {
-        const child = labelGroup.children[0];
-        labelGroup.remove(child);
-        if ((child as any).material?.map) (child as any).material.map.dispose();
-        if ((child as any).material) (child as any).material.dispose();
-        if ((child as any).geometry) (child as any).geometry.dispose();
-      }
-      events.forEach(event => {
-        const isActive = currentStep > event.step;
-        const isCurrent = currentStep === event.step;
-        if (!isActive && !isCurrent) return;
-        const posX = calculateEventPosition(event, events, totalSteps);
-        let posY = 0;
-        if (event.tx === 'T1') posY = 2;
-        if (event.tx === 'T2') posY = -2;
-        let color = theme.systemColor;
-        let glowColor = new THREE.Color(theme.systemColor);
-        if (event.tx === 'T1') { color = theme.t1Color; glowColor = new THREE.Color(theme.t1Color); }
-        else if (event.tx === 'T2') { color = theme.t2Color; glowColor = new THREE.Color(theme.t2Color); }
-        if (event.highlight) { color = theme.highlightColor; glowColor = new THREE.Color(theme.highlightColor); }
-        const labelOffset = event.labelOffset || 0;
-        const labelY = posY + (event.tx === 'T1' ? -1.5 : 1.5) + labelOffset;
-        const texture = LabelTextureGenerator.generateTexture({
-          text: event.action,
-          font: '600 16px Inter, Arial, sans-serif',
-          textColor: '#fff',
-          backgroundColor: color + '40', // 25% opacity
-          borderRadius: 8,
-          paddingX: 12,
-          paddingY: 12,
-          maxWidth: 220
-        });
-        const aspect = texture.width / texture.height;
-        const width = 2.0;
-        const height = width / aspect;
-        const material = createShaderLabelMaterial(new THREE.CanvasTexture(texture), glowColor, isCurrent ? 0.4 : 0.2);
-        const geometry = new THREE.PlaneGeometry(width, height);
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(posX, labelY, 1.0);
-        mesh.userData = {
-          eventId: event.id,
-          animation: {
-            pulsate: isCurrent,
-            fade: false
-          }
-        };
-        labelGroup.add(mesh);
-      });
-    };
-
-    return { update, animate };
-  })();
 
   const concurrencyVisualizationSystem = (() => {
     let group: THREE.Group | null = null;
@@ -450,6 +285,305 @@ const TimelineVisualization: React.FC<TimelineVisualizationProps> = ({
     return { update, animate };
   })();
 
+  const createShaderLabelMaterial = (baseTexture: THREE.Texture, glowColor: THREE.Color, glowIntensity: number) => {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        baseTexture: { value: baseTexture },
+        glowColor: { value: glowColor },
+        glowIntensity: { value: glowIntensity },
+        time: { value: 0.0 }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D baseTexture;
+        uniform vec3 glowColor;
+        uniform float glowIntensity;
+        uniform float time;
+        varying vec2 vUv;
+        void main() {
+          vec4 texColor = texture2D(baseTexture, vUv);
+          gl_FragColor = texColor;
+          if (glowIntensity > 0.0) {
+            float pulseFactor = 0.5 + 0.5 * sin(time * 3.0);
+            vec3 glow = glowColor * glowIntensity * pulseFactor;
+            gl_FragColor.rgb += glow * texColor.a;
+          }
+        }
+      `,
+      transparent: true,
+      side: THREE.DoubleSide
+    });
+  };
+
+  const shaderLabelsSystem = (() => {
+    let labelGroup: THREE.Group | null = null;
+    let lastRenderer: THREE.WebGLRenderer | null = null;
+    let lastCamera: THREE.Camera | null = null;
+    let labelMeshes: THREE.Mesh[] = [];
+    let lastHoveredIndex: number | null = null;
+    let lastCurrentIndex: number | null = null;
+    let labelPositions: {x: number, y: number, tx: string}[] = [];
+    let isMouseOverContainer: boolean = false;
+
+    const animate = (time: number) => {
+      if (!labelGroup || !lastCamera) return;
+      
+      // Check if current or hovered state changed
+      const currentIndex = labelMeshes.findIndex(mesh => mesh.userData.isCurrent);
+      if (lastCurrentIndex !== currentIndex || lastHoveredIndex !== hoveredShaderLabelIndex) {
+        // Reposition labels to prevent overlap
+        adjustLabelPositions(currentIndex, hoveredShaderLabelIndex);
+        lastCurrentIndex = currentIndex;
+        lastHoveredIndex = hoveredShaderLabelIndex;
+      }
+      
+      labelGroup.children.forEach((label, index) => {
+        const mesh = label as THREE.Mesh;
+        mesh.quaternion.copy(lastCamera.quaternion);
+        
+        // Determine if this label should be visible
+        const isCurrent = mesh.userData.isCurrent;
+        const isHovered = index === hoveredShaderLabelIndex;
+        const isInitialState = mesh.userData.isInitialState;
+        const shouldBeVisible = isCurrent || isHovered || (isMouseOverContainer && mesh.userData.isActive);
+        
+        // Update visibility with smooth transition
+        if (mesh.userData.targetOpacity === undefined) {
+          mesh.userData.targetOpacity = shouldBeVisible ? 1.0 : 0.0;
+          mesh.userData.currentOpacity = shouldBeVisible ? 1.0 : 0.0;
+        } else {
+          mesh.userData.targetOpacity = shouldBeVisible ? 1.0 : 0.0;
+          // Smooth transition
+          const transitionSpeed = 0.15;
+          mesh.userData.currentOpacity += (mesh.userData.targetOpacity - mesh.userData.currentOpacity) * transitionSpeed;
+        }
+        
+        // Apply opacity
+        if ((mesh.material as any).opacity !== undefined) {
+          (mesh.material as any).opacity = mesh.userData.currentOpacity;
+        }
+        
+        // Hide completely if opacity is very low
+        mesh.visible = mesh.userData.currentOpacity > 0.01;
+        
+        if ((mesh.material as any).uniforms) {
+          const timeValue = time / 1000;
+          (mesh.material as any).uniforms.time.value = timeValue;
+          
+          // Enhance glow effect for current/hovered/initial
+          const isSpecial = index === hoveredShaderLabelIndex || mesh.userData.isCurrent || mesh.userData.isInitialState;
+          if (isSpecial && mesh.visible) {
+            const pulseIntensity = 0.5 + 0.5 * Math.sin(timeValue * 4.0);
+            (mesh.material as any).uniforms.glowIntensity.value = 0.4 + (pulseIntensity * 0.3);
+          } else {
+            (mesh.material as any).uniforms.glowIntensity.value = 0.1;
+          }
+        }
+        
+        if (mesh.userData.animation && mesh.visible) {
+          const animation = mesh.userData.animation;
+          const isCurrent = mesh.userData.isCurrent;
+          const isHovered = index === hoveredShaderLabelIndex;
+          const isInitialState = mesh.userData.isInitialState;
+          
+          if (animation.pulsate) {
+            // More dramatic scale for current/hovered/initial
+            let baseScale = 1.0;
+            if (isCurrent) baseScale = 1.3;
+            else if (isHovered) baseScale = 1.2;
+            else if (isInitialState) baseScale = 1.1;
+            else baseScale = 0.9;
+            
+            const pulseScale = baseScale * (1 + 0.15 * Math.sin(time / 400));
+            mesh.scale.set(pulseScale, pulseScale, 1);
+            
+            // Adjust z-position to bring important labels forward
+            if (isCurrent || isHovered || isInitialState) {
+              mesh.position.z = 1.5;
+            } else {
+              mesh.position.z = 1.0;
+            }
+          }
+        }
+      });
+    };
+    
+    // Function to adjust label positions to prevent overlap
+    const adjustLabelPositions = (currentIndex: number, hoveredIndex: number | null) => {
+      if (!labelGroup || labelMeshes.length === 0) return;
+      
+      // First pass: identify potential overlaps
+      const overlaps: {[key: number]: number[]} = {};
+      
+      for (let i = 0; i < labelPositions.length; i++) {
+        for (let j = i + 1; j < labelPositions.length; j++) {
+          const posA = labelPositions[i];
+          const posB = labelPositions[j];
+          
+          // Check if labels are close horizontally and in same lane
+          if (Math.abs(posA.x - posB.x) < 2.0 && posA.tx === posB.tx) {
+            if (!overlaps[i]) overlaps[i] = [];
+            if (!overlaps[j]) overlaps[j] = [];
+            overlaps[i].push(j);
+            overlaps[j].push(i);
+          }
+        }
+      }
+      
+      // Second pass: adjust positions
+      for (const [index, conflictIndices] of Object.entries(overlaps)) {
+        const i = parseInt(index);
+        const mesh = labelMeshes[i];
+        const pos = labelPositions[i];
+        
+        // Skip current or hovered (they take priority)
+        if (i === currentIndex || i === hoveredIndex) continue;
+        
+        // Check if this conflicts with current or hovered
+        const hasSpecialConflict = conflictIndices.some(j => 
+          j === currentIndex || j === hoveredIndex);
+          
+        if (hasSpecialConflict) {
+          // Move this label further away
+          const offset = pos.tx === 'T1' ? -0.8 : 0.8;
+          mesh.position.y += offset;
+        } else {
+          // Stagger regular labels
+          const conflictIndex = conflictIndices.findIndex(j => j < i);
+          if (conflictIndex >= 0) {
+            const offset = pos.tx === 'T1' ? -0.4 : 0.4;
+            mesh.position.y += offset * (conflictIndex + 1);
+          }
+        }
+      }
+    };
+
+    const update = (scene: THREE.Scene, renderer: THREE.WebGLRenderer, camera: THREE.Camera, events: TimelineEvent[], currentStep: number, totalSteps: number) => {
+      if (!labelGroup) {
+        labelGroup = new THREE.Group();
+        scene.add(labelGroup);
+      }
+      lastRenderer = renderer;
+      lastCamera = camera;
+      while (labelGroup.children.length) {
+        const child = labelGroup.children[0];
+        labelGroup.remove(child);
+        if ((child as any).material?.map) (child as any).material.map.dispose();
+        if ((child as any).material) (child as any).material.dispose();
+        if ((child as any).geometry) (child as any).geometry.dispose();
+      }
+      labelMeshes = [];
+      labelPositions = [];
+      lastHoveredIndex = null;
+      lastCurrentIndex = null;
+      
+      events.forEach(event => {
+        const isActive = currentStep > event.step;
+        const isCurrent = currentStep === event.step;
+        // Only consider an event as "Initial State" if it explicitly has "Initial State" as action
+        // This prevents duplicate labels due to step 0 detection
+        const isInitialState = event.action === "Initial State";
+        
+        const posX = calculateEventPosition(event, events, totalSteps);
+        let posY = 0;
+        if (event.tx === 'T1') posY = 2;
+        if (event.tx === 'T2') posY = -2;
+        
+        // Store position for overlap detection
+        labelPositions.push({x: posX, y: posY, tx: event.tx || 'system'});
+        
+        let color = theme.systemColor;
+        let glowColor = new THREE.Color(theme.systemColor);
+        if (event.tx === 'T1') { color = theme.t1Color; glowColor = new THREE.Color(theme.t1Color); }
+        else if (event.tx === 'T2') { color = theme.t2Color; glowColor = new THREE.Color(theme.t2Color); }
+        if (event.highlight) { color = theme.highlightColor; glowColor = new THREE.Color(theme.highlightColor); }
+        
+        // Adjust label offset to prevent lane overlap
+        const labelOffset = event.labelOffset || 0;
+        const labelY = posY + (event.tx === 'T1' ? -1.8 : 1.8) + labelOffset;
+        
+        // Generate texture with appropriate background color
+        let bgColor = color + (isCurrent ? '90' : isActive ? '60' : '30');
+        if (isCurrent) bgColor = theme.highlightColor + '90';
+        if (isInitialState) bgColor = theme.highlightColor + '90';
+        
+        const texture = LabelTextureGenerator.generateTexture({
+          text: event.action,
+          font: '600 18px Inter, Arial, sans-serif',
+          textColor: '#fff',
+          backgroundColor: bgColor,
+          borderRadius: 8,
+          paddingX: 16,
+          paddingY: 14,
+          maxWidth: 280
+        });
+        const aspect = texture.width / texture.height;
+        const width = 2.5;
+        const height = width / aspect;
+        
+        // Create material with appropriate glow intensity
+        const isSpecial = isCurrent || isInitialState || hoveredShaderLabelIndex === labelMeshes.length;
+        const glowIntensity = isSpecial ? 0.6 : isActive ? 0.3 : 0.1;
+        const material = createShaderLabelMaterial(
+          new THREE.CanvasTexture(texture), 
+          glowColor, 
+          glowIntensity
+        );
+        
+        // Set initial opacity based on event type
+        material.transparent = true;
+        material.opacity = isCurrent ? 1.0 : 0.0;
+        
+        const geometry = new THREE.PlaneGeometry(width, height);
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(posX, labelY, 1.0);
+        
+        // Store important metadata for animation and interaction
+        mesh.userData = {
+          eventId: event.id,
+          isCurrent,
+          isActive,
+          isInitialState,
+          targetOpacity: isCurrent ? 1.0 : 0.0,
+          currentOpacity: isCurrent ? 1.0 : 0.0,
+          animation: {
+            pulsate: true
+          }
+        };
+        
+        // Set initial scale based on importance
+        const initialScale = isCurrent ? 1.3 : isInitialState ? 1.1 : isActive ? 1.0 : 0.8;
+        mesh.scale.set(initialScale, initialScale, 1);
+        
+        // Initially show only current labels
+        mesh.visible = isCurrent;
+        
+        labelGroup.add(mesh);
+        labelMeshes.push(mesh);
+      });
+      
+      // Initial position adjustment
+      const currentIndex = labelMeshes.findIndex(mesh => mesh.userData.isCurrent);
+      adjustLabelPositions(currentIndex, hoveredShaderLabelIndex);
+    };
+
+    const getLabelMeshes = () => {
+      return labelMeshes;
+    };
+    
+    const setMouseOverState = (isOver: boolean) => {
+      isMouseOverContainer = isOver;
+    };
+
+    return { update, animate, getLabelMeshes, setMouseOverState };
+  })();
+
   const calculateEventPosition = (event: TimelineEvent, events: TimelineEvent[], totalSteps: number) => {
     if (layout === 'absolute' && event.timestamp !== undefined) {
       const timeRange = getTimeRange(events);
@@ -468,6 +602,19 @@ const TimelineVisualization: React.FC<TimelineVisualizationProps> = ({
 
   const handleEventClick = (event: TimelineEvent) => {
     if (onEventClick) onEventClick(event);
+  };
+
+  const handleShaderLabelHover = (mouseX: number, mouseY: number) => {
+    if (!sceneRef.current || !cameraRef.current) return;
+    mouse.current.set(mouseX, mouseY);
+    raycaster.current.setFromCamera(mouse.current, cameraRef.current);
+    const labelMeshes = shaderLabelsSystem.getLabelMeshes();
+    const hits = raycaster.current.intersectObjects(labelMeshes, true);
+    if (hits.length > 0) {
+      hoveredShaderLabelIndex = labelMeshes.indexOf(hits[0].object as THREE.Mesh);
+    } else {
+      hoveredShaderLabelIndex = null;
+    }
   };
 
   useEffect(() => {
@@ -518,28 +665,42 @@ const TimelineVisualization: React.FC<TimelineVisualizationProps> = ({
     if (!sceneRef.current || !rendererRef.current || !cameraRef.current) return;
     progressLinesSystem.update(sceneRef.current, events, currentStep, totalSteps);
     eventMarkersSystem.update(sceneRef.current, events, currentStep, totalSteps);
-    eventConnectorsSystem.update(sceneRef.current, events, currentStep, totalSteps);
-    if (labelStyle === 'shader') {
-      shaderLabelsSystem.update(sceneRef.current, rendererRef.current, cameraRef.current, events, currentStep, totalSteps);
-    }
+    shaderLabelsSystem.update(sceneRef.current, rendererRef.current, cameraRef.current, events, currentStep, totalSteps);
     concurrencyVisualizationSystem.update(sceneRef.current, events, currentStep, totalSteps);
-  }, [events, currentStep, totalSteps, labelStyle, showConcurrencyLines, theme, layout]);
+  }, [events, currentStep, totalSteps, showConcurrencyLines, theme, layout]);
 
-  const renderHtmlOverlay = () => {
-    if (labelStyle !== 'html') return null;
-    return eventLabelsSystem.render(events, currentStep, totalSteps, title);
-  };
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const moveHandler = (e: MouseEvent) => {
+      const rect = el.getBoundingClientRect();
+      const mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const mouseY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      handleShaderLabelHover(mouseX, mouseY);
+    };
+    el.addEventListener('pointermove', moveHandler);
+    return () => {
+      el.removeEventListener('pointermove', moveHandler);
+    };
+  }, []);
 
   return (
     <div className="w-full mt-2 mb-6 px-6 py-4 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-md border border-gray-700">
       <div 
         ref={containerRef}
         className="relative h-72 bg-gray-900/50 backdrop-blur rounded-xl border border-gray-700/50 overflow-hidden px-8 py-6 mx-4 my-2 group"
-        onMouseEnter={() => setShowLegend(true)}
-        onMouseLeave={() => setShowLegend(false)}
+        onMouseEnter={() => {
+          setShowLegend(true);
+          shaderLabelsSystem.setMouseOverState(true);
+        }}
+        onMouseLeave={() => {
+          setShowLegend(false);
+          shaderLabelsSystem.setMouseOverState(false);
+        }}
       >
-        {/* WebGL canvas will be appended here */}
-        {renderHtmlOverlay()}
+        <h3 className="absolute top-2 left-4 text-xl font-bold text-white mb-4 pb-2 border-b border-gray-600/50 z-10">{title}</h3>
+        <div className="absolute top-1/3 left-6 -translate-y-1/2 text-base font-semibold text-cyan-400/90 px-3 py-2 rounded-md bg-cyan-950/30 border border-cyan-500/20 shadow-sm z-10">T1</div>
+        <div className="absolute top-2/3 left-6 -translate-y-1/2 text-base font-semibold text-orange-400/90 px-3 py-2 rounded-md bg-orange-950/30 border border-orange-500/20 shadow-sm z-10">T2</div>
       </div>
     </div>
   );

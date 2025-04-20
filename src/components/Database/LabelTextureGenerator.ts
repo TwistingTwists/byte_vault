@@ -14,51 +14,74 @@ export interface LabelTextureOptions {
 }
 
 export class LabelTextureGenerator {
+  private canvas: HTMLCanvasElement;
+  private context: CanvasRenderingContext2D | null;
+
+  constructor() {
+    this.canvas = document.createElement('canvas');
+    this.context = this.canvas.getContext('2d');
+  }
+
   static generateTexture(options: LabelTextureOptions): HTMLCanvasElement {
+    const generator = new LabelTextureGenerator();
     const {
       text,
-      font = '600 18px Inter, Arial, sans-serif',
-      fontSize = 18,
-      textColor = '#fff',
-      backgroundColor = 'rgba(17,24,39,0.92)',
-      borderRadius = 12,
-      paddingX = 24,
-      paddingY = 12,
-      maxWidth = 320
+      font = '600 16px Inter, Arial, sans-serif',
+      textColor = '#ffffff',
+      backgroundColor = 'rgba(0, 0, 0, 0.7)',
+      borderRadius = 8,
+      paddingX = 12,
+      paddingY = 8,
+      maxWidth = 300
     } = options;
 
-    // Create a temporary canvas
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d')!;
-    ctx.font = font;
-    // Measure text width
-    const textMetrics = ctx.measureText(text);
-    const textWidth = Math.min(textMetrics.width, maxWidth - 2 * paddingX);
-    const width = textWidth + 2 * paddingX;
-    const height = fontSize + 2 * paddingY;
-    canvas.width = width;
-    canvas.height = height;
+    // Measure text
+    generator.context!.font = font;
+    const textWidth = Math.min(generator.context!.measureText(text).width + 20, maxWidth);
+    const fontSize = parseInt(font.match(/\d+px/)![0]);
+    const textHeight = fontSize * 1.4;
 
-    // Draw rounded rectangle background
-    ctx.save();
-    ctx.beginPath();
-    LabelTextureGenerator.roundRect(ctx, 0, 0, width, height, borderRadius);
-    ctx.fillStyle = backgroundColor;
-    ctx.fill();
-    ctx.restore();
+    // Set canvas size
+    const width = textWidth + (paddingX * 2);
+    const height = textHeight + (paddingY * 2);
+    generator.canvas.width = width;
+    generator.canvas.height = height;
+
+    // Clear canvas
+    generator.context!.clearRect(0, 0, width, height);
+
+    // Draw background with rounded corners
+    generator.context!.beginPath();
+    generator.context!.moveTo(borderRadius, 0);
+    generator.context!.lineTo(width - borderRadius, 0);
+    generator.context!.quadraticCurveTo(width, 0, width, borderRadius);
+    generator.context!.lineTo(width, height - borderRadius);
+    generator.context!.quadraticCurveTo(width, height, width - borderRadius, height);
+    generator.context!.lineTo(borderRadius, height);
+    generator.context!.quadraticCurveTo(0, height, 0, height - borderRadius);
+    generator.context!.lineTo(0, borderRadius);
+    generator.context!.quadraticCurveTo(0, 0, borderRadius, 0);
+    generator.context!.closePath();
+    generator.context!.fillStyle = backgroundColor;
+    generator.context!.fill();
+
+    // Add subtle border
+    generator.context!.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    generator.context!.lineWidth = 1.5;
+    generator.context!.stroke();
 
     // Draw text
-    ctx.save();
-    ctx.font = font;
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = textColor;
-    ctx.shadowColor = 'rgba(0,0,0,0.7)';
-    ctx.shadowBlur = 2;
-    ctx.fillText(text, width / 2, height / 2, maxWidth - 2 * paddingX);
-    ctx.restore();
+    generator.context!.font = font;
+    generator.context!.fillStyle = textColor;
+    generator.context!.textAlign = 'center';
+    generator.context!.textBaseline = 'middle';
+    generator.context!.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    generator.context!.shadowBlur = 3;
+    generator.context!.shadowOffsetX = 1;
+    generator.context!.shadowOffsetY = 1;
+    generator.context!.fillText(text, width / 2, height / 2, maxWidth);
 
-    return canvas;
+    return generator.canvas;
   }
 
   // Helper for rounded rectangles
