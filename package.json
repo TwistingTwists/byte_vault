@@ -12,7 +12,10 @@
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "biome format ."
   },
   "dependencies": {
     "@docusaurus/core": "^3.7.0",
@@ -40,6 +43,8 @@
     "@docusaurus/types": "^3.7.0",
     "@tailwindcss/postcss": "^4.1.4",
     "autoprefixer": "^10.4.21",
+    "biome": "^0.2.2",
+    "oxlint": "^0.16.6",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.4",
     "typescript": "~5.6.2"

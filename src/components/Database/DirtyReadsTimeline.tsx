@@ -426,7 +426,7 @@ const DirtyReadsTimeline: React.FC = () => {
   // Database State Visualization component
   const DatabaseStateVisualization = () => {
     const { dbData, transaction1, transaction2 } = systemState;
-    const currentStep = animationState.currentStep;
+    const _currentStep = animationState.currentStep;
     
     // Determine transaction states
     const t1State = transaction1.status;

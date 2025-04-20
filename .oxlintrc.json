@@ -1,0 +1,9 @@
+{
+    "extends": ["recommended"],
+    "rules": {
+      "no-unused-vars": "off",
+    "eslint/no-unused-vars": "off",
+    "unicorn/no-empty-file": "off"
+    },
+    "ignores": ["dist/**", "node_modules/**"]
+  }
