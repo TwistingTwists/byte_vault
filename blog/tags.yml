@@ -97,3 +97,14 @@ writing:
   label: Writing
   permalink: /writing
   description: Writing and publishing
+
+databases:
+  label: Databases
+  permalink: /databases
+  description: Database systems
+  
+transactions:
+  label: Transactions
+  permalink: /transactions
+  description: Transactions
+  
