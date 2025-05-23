@@ -1,23 +1,22 @@
 ---
-slug: "bash-from-basics-01"
-title: "Bash from Basics - 01"
+slug: "neat-bash-script"
+title: "Neat bash script"
 date: 2025-01-12T00:00:00+00:00
 authors: [abeeshake] 
 tags: [ bash ]
-draft: true
 ---
 
+Neat bash script example.
+We'll learn about `>&2` and `pushd` and `popd` in this script.
 
-Bash deep dive.
+{/* truncate */}
 
-
-
-
-
+<summary>
+<details>
 ```bash
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -euo pipefail # -e: exit on error, -u: treat unset vars as error, -o pipefail: fail if any command in a pipeline fails
 
 exit_failure=1
 
@@ -60,7 +59,7 @@ prompt_user() {
       return
     fi
 
-    >&2 echo "Invalid input."
+    >&2 echo "Invalid input." # Print error message to stderr
   done
 }
 
@@ -83,17 +82,223 @@ main() {
   cp -r .templates/yeet/* "$location/$yeet_name"
   cp -r .templates/yeet/.clang-format "$location/$yeet_name"
 
-  pushd "$location/$yeet_name" > /dev/null 2>&1
+  pushd "$location/$yeet_name" > /dev/null 2>&1 # Save current dir, go to new dir (suppress output)
     render_yeet_template
     git init
-  popd > /dev/null 2>&1
+  popd > /dev/null 2>&1 # Return to previous dir (suppress output)
 }
 
 pushd "$project_root" > /dev/null 2>&1
   main
 popd > /dev/null 2>&1
 
+
 ```
 
+</details>
 
-The advantage of pushd and popd is that they manage a stack of directories, making it easy to switch between multiple locations and return to previous ones without having to manually remember and type the paths. With cd alone, you'd have to store the original directory in a variable and then cd back to it explicitly. For simple cases, cd is fine, but pushd and popd are more convenient for complex scenarios involving multiple directory changes.
+</summary>
+
+This is a bash script I found on internet. It uses some very good patterns.
+
+
+
+
+Here’s a progression of examples—from the simplest to more advanced—showing how and why you’d redirect output to stderr with constructs like `>&2`.
+
+---
+
+#### 1. Basic: Send a message to stderr
+
+By default, `echo` writes to **stdout** (file descriptor 1). To send it to **stderr** (fd 2) instead:
+
+```bash
+echo "Oops, something went wrong!" >&2
+```
+
+This is equivalent to:
+
+```bash
+echo "Oops, something went wrong!" 1>&2
+```
+
+Here:
+
+* `1>` means “take stdout (fd 1)”
+* `2` is the target (stderr, fd 2)
+
+Use this when you want your message to count as an error (so it won’t be mixed with normal output if someone is piping or capturing only stdout).
+
+---
+
+#### 2. Intermediate: Functions and logging
+
+Wrap stderr-writes in a helper function for cleaner code:
+
+```bash
+log_error() {
+  echo "ERROR: $*" >&2
+}
+
+# usage
+if ! cp "$src" "$dst"; then
+  log_error "Failed to copy $src to $dst"
+  exit 1
+fi
+```
+
+Here, any call to `log_error "…”` goes to stderr, keeping it separate from “happy-path” output.
+
+---
+
+#### 3. Redirecting entire blocks
+
+You can redirect **all** output in a block to stderr:
+
+```bash
+{
+  echo "Step 1 passed"
+  echo "Step 2 passed"
+  echo "Final check failed!"
+} >&2
+```
+
+Everything inside `{ … }` now writes to fd 2.
+
+---
+
+#### 4. Advanced: Using `exec` for global redirection
+
+If you want your entire script (or a large section) to send stdout to stderr, you can `exec`:
+
+```bash
+# At top of script, before any output:
+exec 1>&2
+
+echo "This goes to stderr"
+# any subsequent echo also goes to stderr
+```
+
+You can even swap streams:
+
+```bash
+# Swap stdout and stderr for the remainder of the script:
+exec 3>&1 1>&2 2>&3 3>&-
+```
+
+After this:
+
+* What was stderr goes to stdout
+* What was stdout goes to stderr
+
+---
+
+#### 5. Super-advanced: Custom descriptors & logging to files
+
+Unix supports more fds than just 0,1,2. You can open your own:
+
+```bash
+# Open fd 3 for appending to a logfile:
+exec 3>>/var/log/my_script.log
+
+# Send normal info to fd 3:
+echo "All OK so far" >&3
+
+# Send errors to stderr as usual:
+echo "Fatal error" >&2
+
+# Restore/close when done:
+exec 3>&-
+```
+
+This lets you:
+
+* Keep “info” messages in a log file via fd 3
+* Keep “errors” distinct on stderr
+
+---
+
+#### Why stderr vs. stdout?
+
+1. **Separation of concerns**
+
+   * **stdout** → data/results
+   * **stderr** → diagnostics/errors
+
+2. **Safe piping**
+
+
+   ```bash
+   myscript.sh | grep Success
+   ```
+
+   only sees stdout successes, not debug or error chatter.
+
+3. **Better automation**
+
+   Tools can capture or redirect each stream independently.
+
+
+---
+
+### Rundown of `pushd`/`popd`, from simple to advanced:
+
+1. **Basic directory stack**
+
+   ```bash
+   pushd /path/to/dir    # cd into DIR, and push old cwd onto a stack
+   popd                  # pop the top stack entry and cd back to it
+   ```
+
+   *Use when you need to temporarily work in another directory and then return.*
+
+2. **Inspecting & nesting**
+
+   ```bash
+   pushd /one
+   pushd /two
+   dirs                  # shows stack order: /two /one /original
+   popd                  # returns to /one (next entry on stack)
+   ```
+
+   *Stack lets you nest multiple switches without manually tracking each path.*
+
+3. **Rotating through entries**
+
+   ```bash
+   pushd A B C           # push A, then B, then C; cwd ends at C
+   dirs                  # C B A
+   pushd +1              # rotate: bring second entry (B) to top; cwd=B
+   pushd +2              # now rotates third (A) to top; cwd=A
+   ```
+
+   *Quickly cycle among saved locations by index instead of full paths.*
+
+4. **Silent switching**
+
+   ```bash
+   pushd /tmp > /dev/null 2>&1  
+   popd  > /dev/null 2>&1
+   ```
+
+   *Suppresses the usual “stack” output when you just want the directory change.*
+
+5. **Robust scripting**
+
+   ```bash
+   pushd "$dir" || { echo "Cannot enter $dir" >&2; exit 1; }
+     # perform actions in $dir…
+   popd || exit 1
+   ```
+
+   *Combine with error checks to ensure you always return (or bail) on failure.*
+
+---
+
+**Why use it?**
+
+* **Convenience:** No need to save and restore `$OLDPWD` manually.
+* **Clarity:** `dirs` shows your navigation history.
+* **Flexibility:** Rotate and jump by index for quick context switches.
+
+
