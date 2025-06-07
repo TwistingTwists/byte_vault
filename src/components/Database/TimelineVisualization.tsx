@@ -149,7 +149,15 @@ const TimelineVisualization: React.FC<TimelineVisualizationProps> = ({
 
   const eventMarkersSystem = {
     update: (scene: THREE.Scene, events: TimelineEvent[], currentStep: number, totalSteps: number) => {
-      scene.children.filter(child => child.userData.type === 'event' || child.userData.type === 'event-glow' || child.userData.type === 'event-pulse' || child.userData.type === 'event-connector').forEach(obj => scene.remove(obj));
+      // Remove old event markers, glows, pulses, and connectors
+      scene.children.filter(child => child.userData.type === 'event' || child.userData.type === 'event-glow' || child.userData.type === 'event-pulse' || child.userData.type === 'event-connector' || child.userData.type === 'event-marker-bloom').forEach(obj => {
+        scene.remove(obj);
+        if ((obj as any).material) (obj as any).material.dispose?.();
+        if ((obj as any).geometry) (obj as any).geometry.dispose?.();
+      });
+
+      // --- InstancedMesh for event markers ---
+      const instanceData: { position: [number, number, number], color: THREE.Color, opacity: number, size: number, event: TimelineEvent, index: number, isActive: boolean, isCurrent: boolean }[] = [];
       events.forEach((event, index) => {
         const positionX = calculateEventPosition(event, events, totalSteps);
         let positionY = 0;
@@ -166,34 +174,238 @@ const TimelineVisualization: React.FC<TimelineVisualizationProps> = ({
           color = `#${darkHex}`;
         }
         const size = isCurrent ? 0.25 : 0.2;
-        const markerGeometry = new THREE.SphereGeometry(size, 16, 16);
-        const markerMaterial = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: isActive || isCurrent ? 1 : 0.6 });
-        const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-        marker.position.set(positionX, positionY, 0.2);
-        marker.userData = { type: 'event', eventIndex: index, action: event.action, tx: event.tx, event };
-        scene.add(marker);
-        if (isActive || isCurrent) {
-          const pointLight = new THREE.PointLight(color, 2, 1.5);
-          pointLight.position.set(positionX, positionY, 0.5);
-          pointLight.userData = { type: 'event-glow', eventIndex: index };
-          scene.add(pointLight);
-          if (isCurrent) {
-            const pulseGeometry = new THREE.SphereGeometry(0.1, 16, 16);
-            const pulseMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 });
-            const pulse = new THREE.Mesh(pulseGeometry, pulseMaterial);
-            pulse.position.set(positionX, positionY, 0.3);
-            pulse.userData = { type: 'event-pulse', eventIndex: index, createdAt: Date.now() };
-            scene.add(pulse);
-          }
-        }
-        // Only add connectors for events with a transaction (T1 or T2)
-        if (event.tx && event.action !== "Initial State") {
+        const opacity = isActive || isCurrent ? 1 : 0.6;
+        instanceData.push({ position: [positionX, positionY, 0.2], color: new THREE.Color(color), opacity, size, event, index, isActive, isCurrent });
+      });
+      // Use the largest size for all spheres (Three.js InstancedMesh can't vary geometry per instance)
+      const maxSize = Math.max(...instanceData.map(i => i.size));
+      const markerGeometry = new THREE.SphereGeometry(maxSize, 16, 16);
+      const markerMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true });
+      const instancedMesh = new THREE.InstancedMesh(markerGeometry, markerMaterial, instanceData.length);
+      // Color/opacity attribute
+      const colorArray = new Float32Array(instanceData.length * 4); // r,g,b,a
+      instanceData.forEach((data, i) => {
+        const matrix = new THREE.Matrix4();
+        matrix.makeScale(data.size / maxSize, data.size / maxSize, data.size / maxSize);
+        matrix.setPosition(...data.position);
+        instancedMesh.setMatrixAt(i, matrix);
+        colorArray[i * 4 + 0] = data.color.r;
+        colorArray[i * 4 + 1] = data.color.g;
+        colorArray[i * 4 + 2] = data.color.b;
+        colorArray[i * 4 + 3] = data.opacity;
+        // Store event info for picking
+        instancedMesh.userData = instancedMesh.userData || {};
+        instancedMesh.userData[i] = { event: data.event, eventIndex: data.index };
+      });
+      // Add color/opacity as an instanced attribute
+      markerGeometry.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(colorArray, 4));
+      // Patch material to use vertex color and opacity
+      markerMaterial.onBeforeCompile = shader => {
+        shader.vertexShader = shader.vertexShader.replace(
+          '#include <common>',
+          `#include <common>\nattribute vec4 instanceColor; varying vec4 vInstanceColor;`
+        ).replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>\nvInstanceColor = instanceColor;`
+        );
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <common>',
+          `#include <common>\nvarying vec4 vInstanceColor;`
+        ).replace(
+          'vec4 diffuseColor = vec4( diffuse, opacity );',
+          'vec4 diffuseColor = vec4( vInstanceColor.rgb, vInstanceColor.a );'
+        );
+      };
+      scene.add(instancedMesh);
+
+      // Create a bloom/glow composite for event markers
+      const createBloomLayers = (data: typeof instanceData) => {
+        // Create multiple layers with increasing size and decreasing opacity
+        const layers = [
+          { scale: 1.0, opacity: 1.0 },    // Core
+          { scale: 1.5, opacity: 0.6 },    // Inner glow
+          { scale: 2.0, opacity: 0.4 },    // Middle glow
+          { scale: 2.5, opacity: 0.2 }     // Outer glow
+        ];
+
+        layers.forEach((layer, layerIndex) => {
+          const geometry = new THREE.SphereGeometry(maxSize, 16, 16);
+          const material = new THREE.MeshBasicMaterial({
+            vertexColors: true,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+          });
+          const instancedMesh = new THREE.InstancedMesh(geometry, material, data.length);
+          const colorArray = new Float32Array(data.length * 4);
+
+          data.forEach((item, i) => {
+            const matrix = new THREE.Matrix4();
+            const baseScale = item.size / maxSize;
+            const finalScale = baseScale * layer.scale;
+            matrix.makeScale(finalScale, finalScale, finalScale);
+            matrix.setPosition(...item.position);
+            instancedMesh.setMatrixAt(i, matrix);
+
+            // Enhance color intensity for glow
+            const glowColor = item.color.clone().multiplyScalar(1.5);
+            colorArray[i * 4 + 0] = glowColor.r;
+            colorArray[i * 4 + 1] = glowColor.g;
+            colorArray[i * 4 + 2] = glowColor.b;
+            // Adjust opacity based on event state and layer
+            let finalOpacity = layer.opacity;
+            if (item.isCurrent) finalOpacity *= 1.0;
+            else if (item.isActive) finalOpacity *= 0.8;
+            else finalOpacity *= 0.5;
+            colorArray[i * 4 + 3] = finalOpacity;
+
+            instancedMesh.userData[i] = { type: 'event-marker-bloom', eventIndex: item.index };
+          });
+
+          geometry.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(colorArray, 4));
+          material.onBeforeCompile = shader => {
+            shader.vertexShader = shader.vertexShader.replace(
+              '#include <common>',
+              `#include <common>
+              attribute vec4 instanceColor;
+              varying vec4 vInstanceColor;`
+            ).replace(
+              '#include <begin_vertex>',
+              `#include <begin_vertex>
+              vInstanceColor = instanceColor;`
+            );
+            shader.fragmentShader = shader.fragmentShader.replace(
+              '#include <common>',
+              `#include <common>
+              varying vec4 vInstanceColor;`
+            ).replace(
+              'vec4 diffuseColor = vec4( diffuse, opacity );',
+              'vec4 diffuseColor = vec4( vInstanceColor.rgb, vInstanceColor.a );'
+            );
+          };
+
+          instancedMesh.userData.type = 'event-marker-bloom';
+          scene.add(instancedMesh);
+        });
+      };
+
+      // Create the bloom effect for all markers
+      createBloomLayers(instanceData);
+
+      // Create instanced glow points for active/current events
+      const glowPoints = instanceData.filter(data => data.isActive || data.isCurrent);
+      if (glowPoints.length > 0) {
+        const glowGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+        const glowMaterial = new THREE.MeshBasicMaterial({
+          vertexColors: true,
+          transparent: true,
+          blending: THREE.AdditiveBlending
+        });
+        const glowInstancedMesh = new THREE.InstancedMesh(glowGeometry, glowMaterial, glowPoints.length);
+        const glowColorArray = new Float32Array(glowPoints.length * 4);
+        
+        glowPoints.forEach((data, i) => {
+          const matrix = new THREE.Matrix4();
+          matrix.makeScale(1.5, 1.5, 1.5);
+          matrix.setPosition(data.position[0], data.position[1], 0.5);
+          glowInstancedMesh.setMatrixAt(i, matrix);
+          
+          // Set color with higher intensity for glow effect
+          const glowColor = data.color.clone().multiplyScalar(2.0);
+          glowColorArray[i * 4 + 0] = glowColor.r;
+          glowColorArray[i * 4 + 1] = glowColor.g;
+          glowColorArray[i * 4 + 2] = glowColor.b;
+          glowColorArray[i * 4 + 3] = data.isCurrent ? 0.8 : 0.5;
+          
+          glowInstancedMesh.userData[i] = { type: 'event-glow', eventIndex: data.index };
+        });
+        
+        glowGeometry.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(glowColorArray, 4));
+        glowMaterial.onBeforeCompile = shader => {
+          shader.vertexShader = shader.vertexShader.replace(
+            '#include <common>',
+            `#include <common>\nattribute vec4 instanceColor; varying vec4 vInstanceColor;`
+          ).replace(
+            '#include <begin_vertex>',
+            `#include <begin_vertex>\nvInstanceColor = instanceColor;`
+          );
+          shader.fragmentShader = shader.fragmentShader.replace(
+            '#include <common>',
+            `#include <common>\nvarying vec4 vInstanceColor;`
+          ).replace(
+            'vec4 diffuseColor = vec4( diffuse, opacity );',
+            'vec4 diffuseColor = vec4( vInstanceColor.rgb, vInstanceColor.a );'
+          );
+        };
+        glowInstancedMesh.userData.type = 'event-glow';
+        scene.add(glowInstancedMesh);
+      }
+
+      // Create instanced pulse effects for current events
+      const pulsePoints = instanceData.filter(data => data.isCurrent);
+      if (pulsePoints.length > 0) {
+        const pulseGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+        const pulseMaterial = new THREE.MeshBasicMaterial({
+          vertexColors: true,
+          transparent: true,
+          blending: THREE.AdditiveBlending
+        });
+        const pulseInstancedMesh = new THREE.InstancedMesh(pulseGeometry, pulseMaterial, pulsePoints.length);
+        const pulseColorArray = new Float32Array(pulsePoints.length * 4);
+        
+        pulsePoints.forEach((data, i) => {
+          const matrix = new THREE.Matrix4();
+          matrix.makeScale(1.0, 1.0, 1.0);
+          matrix.setPosition(data.position[0], data.position[1], 0.3);
+          pulseInstancedMesh.setMatrixAt(i, matrix);
+          
+          // Set white color with pulse opacity
+          pulseColorArray[i * 4 + 0] = 1.0; // r
+          pulseColorArray[i * 4 + 1] = 1.0; // g
+          pulseColorArray[i * 4 + 2] = 1.0; // b
+          pulseColorArray[i * 4 + 3] = 0.7; // alpha
+          
+          pulseInstancedMesh.userData[i] = { 
+            type: 'event-pulse', 
+            eventIndex: data.index,
+            createdAt: Date.now()
+          };
+        });
+        
+        pulseGeometry.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(pulseColorArray, 4));
+        pulseMaterial.onBeforeCompile = shader => {
+          shader.vertexShader = shader.vertexShader.replace(
+            '#include <common>',
+            `#include <common>
+            attribute vec4 instanceColor;
+            varying vec4 vInstanceColor;`
+          ).replace(
+            '#include <begin_vertex>',
+            `#include <begin_vertex>
+            vInstanceColor = instanceColor;`
+          );
+          shader.fragmentShader = shader.fragmentShader.replace(
+            '#include <common>',
+            `#include <common>
+            varying vec4 vInstanceColor;`
+          ).replace(
+            'vec4 diffuseColor = vec4( diffuse, opacity );',
+            'vec4 diffuseColor = vec4( vInstanceColor.rgb, vInstanceColor.a );'
+          );
+        };
+        pulseInstancedMesh.userData.type = 'event-pulse';
+        scene.add(pulseInstancedMesh);
+      }
+
+      // Only add connectors for events with a transaction (T1 or T2)
+      instanceData.forEach((data, i) => {
+        if (data.event.tx && data.event.action !== "Initial State") {
           const lineHeight = 4;
           const lineGeometry = new THREE.BoxGeometry(0.02, lineHeight, 0.05);
-          const lineMaterial = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3 });
+          const lineMaterial = new THREE.MeshBasicMaterial({ color: data.color, transparent: true, opacity: 0.3 });
           const line = new THREE.Mesh(lineGeometry, lineMaterial);
-          line.position.set(positionX, event.tx === 'T1' ? 0 : 0, 0.1);
-          line.userData = { type: 'event-connector', eventIndex: index };
+          line.position.set(data.position[0], data.event.tx === 'T1' ? 0 : 0, 0.1);
+          line.userData = { type: 'event-connector', eventIndex: data.index };
           scene.add(line);
         }
       });
