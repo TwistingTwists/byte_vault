@@ -438,7 +438,7 @@ const PhantomReadVisualizer = () => {
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6" ref={timelineRef}>
         <h2 className="text-xl font-semibold mb-4 dark:text-gray-100">Transaction Timelines</h2>
-        <div className="relative mb-8 pt-4">
+        <div className="relative mb-6 pt-3">
           <div className="absolute top-4 left-0 right-0 h-px bg-gray-300 dark:bg-gray-600"></div>
           <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2 px-[2.5%] w-[95%]">
             {Array.from({ length: Math.floor(maxTime / 10) + 1 }, (_, i) => {
@@ -453,19 +453,19 @@ const PhantomReadVisualizer = () => {
           {(isRunning || currentStep > 0) && (
             <div className="absolute top-[6px] w-0.5 h-6 bg-red-500 transition-all duration-200 ease-linear z-20"
               style={{ left: `${getTimePosition(currentTime)}%` }}>
-              <div className="absolute -top-2 -left-[7px] w-4 h-4 bg-red-500 rounded-full border-2 border-white dark:border-gray-800 shadow-md"></div>
+              <div className="absolute -top-2 -left-[7px] w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800 shadow-md"></div>
             </div>
           )}
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-6">
           {Object.entries(transactions).map(([txName, tx]) => (
             <div key={txName} className="relative">
               <div className="flex items-center mb-2">
-                <div className="w-4 h-4 rounded-full mr-3 flex-shrink-0" style={{ backgroundColor: tx.color }}></div>
+                <div className="w-3 h-3 rounded-full mr-3 flex-shrink-0" style={{ backgroundColor: tx.color }}></div>
                 <h3 className="text-lg font-semibold dark:text-gray-100">{txName}</h3>
               </div>
-              <div className="relative h-10 bg-gray-100 dark:bg-gray-700 rounded">
+              <div className="relative h-8 bg-gray-100 dark:bg-gray-700 rounded">
                 <div className="absolute top-0 left-0 h-full rounded opacity-30"
                   style={{ backgroundColor: tx.color, width: `${getTimePosition(tx.operations[tx.operations.length - 1].time)}%`}}>
                 </div>
@@ -495,9 +495,9 @@ const PhantomReadVisualizer = () => {
                   return (
                     <div
                       key={`${txName}-${op.type}-${op.time}-${idx}`}
-                      className={`absolute top-0.5 w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all duration-300 group
+                      className={`absolute top-0.5 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all duration-300 group
                         ${isActiveOp ? 'bg-white dark:bg-gray-200 shadow-lg scale-105' : 'bg-gray-200 dark:bg-gray-600 opacity-70'}
-                        ${isHighlightedOp ? 'ring-4 ring-offset-1 ring-red-500 scale-125 z-10' : ''}
+                        ${isHighlightedOp ? 'ring-2 ring-offset-1 ring-red-500 scale-110 z-10' : ''}
                       `}
                       style={{ 
                         left: `calc(${getTimePosition(op.time)}% - 18px)`, // half of width

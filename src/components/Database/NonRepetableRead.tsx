@@ -77,11 +77,11 @@ interface MvccScenarioConfig {
   keyMoments: ScenarioKeyMoment[];
 }
 
-interface CompletedTimelineOperation extends TransactionOperation {
+type CompletedTimelineOperation = TransactionOperation & {
   transaction: string;
   color: string;
   txId?: number;
-}
+};
 
 // --- Configuration for MVCC Visualization (Non-Repeatable Read Scenario) ---
 const mvccScenario: MvccScenarioConfig = {
@@ -146,7 +146,7 @@ const mvccScenario: MvccScenarioConfig = {
 
 let versionCounter = 1; // For unique version IDs like v1, v2, ...
 
-const MvccVisualizer: React.FC = () => {
+const NonRepetableRead: React.FC = () => {
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -518,33 +518,42 @@ const MvccVisualizer: React.FC = () => {
                   const opGlobalInfo = completedOperations.find(co => co.transaction === txName && co.time === op.time && co.type === op.type);
                   const isActiveOp = opGlobalInfo !== undefined;
                   
-                  let title = `${op.type.toUpperCase()}`;
-                  if ((op as ReadOperation).target) title += ` ${(op as ReadOperation).target}`;
-                  if ((op as WriteOperation).value !== undefined) title += ` = ${(op as WriteOperation).value}`;
+                  let tooltipText = `${op.type.toUpperCase()}`;
+                  if ((op as ReadOperation).target) tooltipText += ` ${(op as ReadOperation).target}`;
+                  if ((op as WriteOperation).value !== undefined) tooltipText += ` = ${(op as WriteOperation).value}`;
 
                   if (opGlobalInfo && op.type === 'read') {
                     const readDetails = transactionDetails[txName]?.reads[(op as ReadOperation).target];
-                    if (readDetails && readDetails.time === op.time) title += ` -> ${readDetails.value} (v: ${readDetails.versionId})`;
+                    if (readDetails && readDetails.time === op.time) tooltipText += ` -> ${readDetails.value} (v: ${readDetails.versionId})`;
                   }
-                  
+
+                  let opChar = op.type.charAt(0).toUpperCase();
+                  if (op.type === 'read') opChar = 'R';
+                  else if (op.type === 'write') opChar = 'W';
+                  else if (op.type === 'begin') opChar = 'B';
+                  else if (op.type === 'commit') opChar = 'C';
+                  else if (op.type === 'abort') opChar = 'A';
+
                   const isHighlightedOp = keyMomentInfo.highlight?.timelineOps?.some(hOp => hOp.transaction === txName && hOp.time === op.time) && keyMomentInfo.step === currentStep;
 
                   return (
                     <div
                       key={`${txName}-${op.time}-${idx}`}
-                      className={`absolute top-0.5 w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all duration-300 group
+                      className={`absolute top-0.5 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all duration-300 group
                         ${isActiveOp ? 'bg-white dark:bg-gray-200 shadow-lg scale-105' : 'bg-gray-200 dark:bg-gray-600 opacity-70'}
-                        ${isHighlightedOp ? 'ring-2 sm:ring-4 ring-offset-0 sm:ring-offset-1 ring-red-500 dark:ring-red-400 scale-110 sm:scale-125 z-10' : ''}`}
-                      style={{ left: `calc(${getTimePosition(op.time)}% - 16px)`, borderColor: tx.color, color: isActiveOp ? tx.color : 'text-gray-600 dark:text-gray-400' }}
-                      title={title}
+                        ${isHighlightedOp ? 'ring-2 sm:ring-4 ring-offset-1 ring-red-500 dark:ring-red-400 scale-110 sm:scale-125 z-10' : ''}`}
+                      style={{ 
+                        left: `calc(${getTimePosition(op.time)}% - 18px)`, 
+                        borderColor: tx.color, 
+                        color: isActiveOp ? tx.color : '#6b7280' 
+                      }}
+                      title={tooltipText}
                     >
-                      {op.type.charAt(0).toUpperCase()}
-                       {isActiveOp && (
-                        <div className="absolute bottom-full mb-1.5 left-1/2 transform -translate-x-1/2 bg-black text-white px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap z-30 opacity-0 group-hover:opacity-100 pointer-events-none">
-                          {title}
-                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-black"></div>
-                        </div>
-                      )}
+                      {opChar}
+                      <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-black text-white px-2 py-1 rounded text-[10px] sm:text-xs whitespace-nowrap z-30 transition-opacity duration-200 opacity-0 group-hover:opacity-100 pointer-events-none">
+                        {tooltipText}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-black"></div>
+                      </div>
                     </div>
                   );
                 })}
@@ -567,4 +576,4 @@ const MvccVisualizer: React.FC = () => {
   );
 };
 
-export default MvccVisualizer;
+export default NonRepetableRead;

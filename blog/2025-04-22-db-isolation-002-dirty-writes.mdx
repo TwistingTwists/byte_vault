@@ -1,10 +1,10 @@
 ---
-slug: "database-isolation-visualised-dirty-reads"
-title: "Database Isolation (dirty reads)"
-date: 2025-04-21T00:00:00+00:00
+slug: "database-isolation-visualised-dirty-writes"
+title: "DB-002: Database Isolation (dirty writes)"
+date: 2025-04-22T00:00:00+00:00
 authors: [abeeshake] 
 tags: [ databases, transactions]
-draft: false
+draft: true
 ---
 
 
@@ -12,13 +12,14 @@ import TOCInline from '@theme/TOCInline';
 
 <TOCInline toc={toc} />
 
-import DirtyReadsTimeline from "../src/components/Database/DirtyReadsTimeline";
+import DirtyWritesTimeline from "../src/components/Database/DirtyWritesTimeline";
 
-## Understanding Dirty Reads: A Database Isolation Problem
+## Understanding Dirty Writes: A Database Isolation Problem
 
-### What is a Dirty Read?
+### What is a Dirty Write?
 
-A **dirty read** occurs when a transaction reads data that has been written by another transaction but not yet committed. If the writing transaction rolls back, the data read by the first transaction becomes invalid—hence, "dirty."
+A **dirty write** occurs when multiple transactions try to update the same data concurrently without proper isolation,
+potentially causing one transaction to overwrite changes made by another uncommitted transaction.
 
 This can lead to inconsistent or incorrect results in applications, especially in systems where multiple users or processes are accessing and modifying the data concurrently.
 
@@ -27,7 +28,7 @@ This can lead to inconsistent or incorrect results in applications, especially i
 
 ### Example Scenario
 
-Let's walk through a concrete example to see how a dirty read can happen.
+Let's walk through a concrete example to see how a dirty write can happen.
 
 #### Initial Database State
 
@@ -42,7 +43,7 @@ Two transactions, **T1** and **T2**, will interact with the `name` row.
 
 ---
 
-### Step-by-Step: Dirty Read in Action
+### Step-by-Step: Dirty Write in Action
 
 #### 1. T1 Reads the Original Value
 
@@ -56,11 +57,11 @@ Two transactions, **T1** and **T2**, will interact with the `name` row.
 - This change is **not yet committed** to the database.
 - Other transactions should ideally not see this uncommitted value.
 
-#### 3. T1 Reads Again (Dirty Read!)
+#### 3. T1 Reads Again (Dirty Write!)
 
 - **T1** reads the value of `name` again.
 - **Because the database isolation level is low (e.g., READ UNCOMMITTED), T1 sees `name = 'john'`**, even though T2 hasn't committed.
-- This is a **dirty read**: T1 is reading data that might be rolled back.
+- This is a **dirty write**: T1 is reading data that might be rolled back.
 
 #### 4. T2 Commits
 
@@ -79,14 +80,14 @@ If **T2** had rolled back instead of committing, **T1** would have read a value 
 
 ---
 
-## Visualizing the Dirty Read
+## Visualizing the Dirty Write
 
-The animation below demonstrates this scenario step-by-step. You can see how the database and transactions interact, and exactly when the dirty read occurs.
+The animation below demonstrates this scenario step-by-step. You can see how the database and transactions interact, and exactly when the dirty write occurs.
 
-<DirtyReadsTimeline />
+<DirtyWritesTimeline />
 ---
 
 ## Conclusion
 
-Dirty reads are a classic example of why database isolation levels matter. By default, most production databases avoid dirty reads by using stricter isolation (like READ COMMITTED or higher). However, understanding this scenario helps you appreciate the trade-offs between performance and consistency in concurrent systems.
+Dirty writes are a classic example of why database isolation levels matter. By default, most production databases avoid dirty writes by using stricter isolation (like READ COMMITTED or higher). However, understanding this scenario helps you appreciate the trade-offs between performance and consistency in concurrent systems.
  

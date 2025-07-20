@@ -107,4 +107,33 @@ transactions:
   label: Transactions
   permalink: /transactions
   description: Transactions
-  
+
+books:
+  label: books
+  permalink: /books
+  description: Books
+
+mvcc:
+  label: MVCC
+  permalink: /mvcc
+  description: Multi-Version Concurrency Control
+
+distributed-systems:
+  label: Distributed Systems
+  permalink: /distributed-systems
+  description: Distributed systems architecture and concepts
+
+information-retrieval:
+  label: Information Retrieval
+  permalink: /information-retrieval
+  description: Information retrieval and search systems
+
+ai:
+  label: AI
+  permalink: /ai
+  description: Artificial Intelligence
+
+context-engineering:
+  label: Context Engineering
+  permalink: /context-engineering
+  description: Context engineering and prompt optimization

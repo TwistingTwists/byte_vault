@@ -1,6 +1,6 @@
 import React from 'react';
-import FullScreenWrapper from './FullScreenWrapper';
 import NonRepetableRead from './NonRepetableRead';
+import FullScreenWrapper from './FullScreenWrapper';
 
 const FullScreenNonRepetableReadVisualizer: React.FC = () => {
   return (

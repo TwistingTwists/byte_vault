@@ -1,0 +1,239 @@
+---
+slug: "claude-code-context-engineering-v2"
+title: "The Day I Taught Claude Code to Work Without Me (And How You Can Too)"
+date: 2025-07-21T00:00:00+00:00
+authors: [abeeshake]
+tags: [ai, context-engineering, claude-code, productivity]
+draft: false
+---
+
+import TldrCallout from '@site/src/components/TldrCards/TldrCallout';
+import LearningObjective from '@site/src/components/LearningObjective';
+import MermaidPopup from '@site/src/components/MermaidPopup';
+import TipsSection from '@site/src/components/TipsSection';
+import MinimalDetails from '@site/src/components/MinimalDetails';
+
+
+
+<TldrCallout 
+  problem="You're trapped micromanaging Claude Code instead of building"
+  solution="Train Claude Code once, then let it work autonomously"
+  how="Strategic context engineering: CLAUDE.md files, systematic workflows, and learning capture"
+  benefit="Claude Code becomes your autonomous teammate"
+/>
+
+Here is [CLAUDE.md](https://gist.github.com/tripathi456/bfaf9add4b70bff131cd574c2f93cfac)
+
+
+{/* truncate */}
+
+## Day 0: Just moved from cursor to claude code
+
+*It's 11 PM on a Tuesday. My token budget just hit zero. Claude Code is asking me the same question for the fourth time: "What coding style does this project use?" I've spent 6 hours being a glorified copy-paste machine, explaining the same context over and over.*
+
+*Sound familiar?*
+
+That night, I realized something critical: **Claude Code is teachable**. But I was the worst teacher on Earth.
+
+## Day 1: Fighting Claude Code (The Problem)
+
+Every conversation was Groundhog Day:
+
+- "What's our testing framework again?"
+- "How do we name files in this project?"  
+- "What's the deployment process?"
+
+I was Claude Code's personal Wikipedia. **This had to change.**
+
+## Day 2: The Teaching Template (The Mentor)
+
+> What if Claude Code could remember your project like a team member who's been there for years?
+
+Instead of explaining everything every time, I wrote a template. The gist is:
+
+```md
+# Communication: Be concise, reference past learnings from docs/work/
+# File Naming: YYYY-MM-DD-[001]-[category]-[summary].md  
+# Never code without checking docs/work/ for similar past solutions
+```
+
+That's it. **This eliminated hours of repetitive context.**
+
+<MinimalDetails summary="See the prompt →">
+
+```md
+# Project: [Your Project Name]
+
+## Tech Stack & Tooling
+- **Language**: Python 3.11+
+- **Package Manager**: `uv` (use `uv add <dependency>`, `uv run <script>`)
+- **Testing**: pytest with coverage
+- **Linting**: ruff + mypy
+
+## Systematic File Naming
+Format: `YYYY-MM-DD-[001-999]-[category]-[four-word-summary].md`
+Folder: `docs/work/`
+Categories: `bug` | `feature` | `task` | `research` | `learnings`
+
+Examples:
+- `2025-07-18-001-feature-user-authentication-system.md`
+- `2025-07-18-002-bug-database-connection-timeout.md`
+
+## Communication Style
+- **Concise**: No fluff, direct responses
+- **Evidence-based**: Show, don't just tell
+- **Contextual**: Reference past learnings from `docs/work/`
+
+## Planning Protocol
+1. **Context Gathering**: Check `docs/work/` for relevant past decisions
+2. **Assumption Documentation**: Explicit assumptions in plan files
+3. **Execution Gate**: Only proceed after planning is complete
+```
+
+</MinimalDetails>
+
+**The transformation was instant.** Claude Code started referencing past decisions, avoiding repeated mistakes, and building on previous work. **It finally felt like working with a teammate.**
+
+## Day 3: The Learning Moment - 30% context - (The Training)
+
+> What if Claude Code could learn from every mistake and never repeat it?
+
+When your context hits 30%, you have one chance to crystallize everything learned. Miss it, and you go back to day 1.
+
+
+
+<MinimalDetails summary="See the prompt →">
+
+```md
+
+When context drops below 30%: 
+
+1. Document every decision made
+2. List what failed (with code snippets)  
+3. Note what worked brilliantly
+4. Write handoff notes for next session
+
+Use the `Systematic File Naming` given above.
+```
+
+</MinimalDetails>
+
+
+## Day 4: The Autonomous Engineer (The Victory)
+
+I saw this tweet - [@svs used Claude Code as an MCP client to write an MCP server](https://x.com/_svs_/status/1928753160337637726). 
+
+Something magical discovered: **When put in verifiable workflows, Claude Code started working much better!**:
+
+- Write code → Run tests → Fix failures → Repeat
+- Build feature → Deploy to staging → Check logs → Iterate  
+- Analyze data → Generate insights → Verify against sources → Summarize
+
+**I wasn't micromanaging anymore. I was collaborating.**
+
+## The War Stories from other folks
+
+Met awesome folks at [Fifth Elephant Conference](https://hasgeek.com/fifthelephant/2025/) where we shared claude code learnings.
+
+<TipsSection contributor="Rajesh" contributorUrl="https://www.linkedin.com/in/codingnirvana/">
+
+### The Token Budget Hack That Doubled My Productivity
+
+Rajesh was burning through tokens like crazy at his startup. Then he discovered something weird about Claude's [5-hour windows](https://support.anthropic.com/en/articles/11145838-using-claude-code-with-your-pro-or-max-plan).
+
+**His discovery:** Start sessions at 7 AM instead of 9 AM.
+
+Why? The overlapping windows create a "double token zone" during peak hours:
+
+**Before:** 9am-2pm, 2pm-7pm (standard)  
+**After:** 7am-12pm, 12pm-5pm, 5pm-10pm (overlapping)
+
+**Result:** Between 9am-5pm = **double tokens available**
+
+
+<svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+  {/* <!-- Timeline --> */}
+  <line x1="50" y1="180" x2="750" y2="180" stroke="#e5e7eb" stroke-width="2"/>
+  
+  {/* <!-- Time labels --> */}
+  <text x="50" y="195" font-family="Arial" font-size="12" fill="#6b7280" text-anchor="middle">7am</text>
+  <text x="150" y="195" font-family="Arial" font-size="12" fill="#6b7280" text-anchor="middle">9am</text>
+  <text x="300" y="195" font-family="Arial" font-size="12" fill="#6b7280" text-anchor="middle">12pm</text>
+  <text x="400" y="195" font-family="Arial" font-size="12" fill="#6b7280" text-anchor="middle">2pm</text>
+  <text x="550" y="195" font-family="Arial" font-size="12" fill="#6b7280" text-anchor="middle">5pm</text>
+  <text x="650" y="195" font-family="Arial" font-size="12" fill="#6b7280" text-anchor="middle">7pm</text>
+  <text x="750" y="195" font-family="Arial" font-size="12" fill="#6b7280" text-anchor="middle">10pm</text>
+  
+  {/* <!-- Standard working day background - light background box --> */}
+  <rect x="150" y="25" width="500" height="140" fill="#10b981" opacity="0.1" rx="6"/>
+  
+  {/* <!-- Standard working day --> */}
+  <rect x="150" y="30" width="500" height="25" fill="#3b82f6" rx="4"/>
+  <text x="160" y="47" font-family="Arial" font-size="13" fill="white">Standard: 9am-7pm</text>
+  
+  {/* <!-- Token windows - all overlapping with the standard day background --> */}
+  <rect x="50" y="80" width="250" height="20" fill="#dc2626" rx="4"/>
+  <text x="60" y="93" font-family="Arial" font-size="12" fill="white">Window A: 7am-12pm</text>
+  
+  <rect x="300" y="110" width="250" height="20" fill="#8b5cf6" rx="4"/>
+  <text x="310" y="123" font-family="Arial" font-size="12" fill="white">Window B: 12pm-5pm</text>
+  
+  <rect x="550" y="140" width="200" height="20" fill="#06b6d4" rx="4"/>
+  <text x="560" y="153" font-family="Arial" font-size="12" fill="white">Window C: 5pm-10pm</text>
+  
+  {/* <!-- Title --> */}
+  <text x="400" y="20" font-family="Arial" font-size="14" fill="#10b981" text-anchor="middle" font-weight="bold">Double Tokens in Overlap Zones</text>
+</svg>
+
+
+### The CSV Strategy That Saved Hours
+
+Rajesh's team was dealing with lots of data analysis requests. CSV files everywhere. Claude kept hitting context limits trying to process raw data.
+
+**The breakthrough:** Stop feeding Claude data. Feed it scripts.
+
+**Old way:** "Here's a 10MB CSV, analyze it"  
+**New way:** "Write a script to analyze this CSV type, then run it"
+
+**Why it works:** Scripts are tiny. Results are focused. Claude guides itself using its own analysis output. 
+
+</TipsSection>
+
+<TipsSection contributor="Ashwin" contributorUrl="https://www.shelfradar.ai/">
+
+### The Accidental Discovery That Changed Everything
+
+Ashwin was debugging a frustrating session. In a moment of rage, he accidentally hit ESC four times.
+
+**What happened next blew his mind.**
+
+Claude Code showed him a prompt history he'd never seen before. Every conversation. Every context. **Time travel for developers.**
+
+**The magic combo:** ESC + ESC + ESC + ESC = Prompt history navigation
+
+**Game changer:** You can resurrect any previous session state instantly.
+
+### Claude Code as Your Database Whisperer
+
+At ShelfRadar, Ashwin deployed Claude Code as their internal SQL agent. 
+
+**The setup:** Claude Code + database schema = autonomous query optimizer
+
+**The result:** 
+
+- Ad-hoc queries refined automatically
+- Schema changes don't break queries  
+- Claude evolves with your database
+
+</TipsSection>
+
+**The question isn't whether Claude Code is teachable.**  
+**The question is: Are you ready to become its teacher?**
+
+---
+
+*This revolution moves fast. By the time you read this, someone's already teaching Claude Code to do things we haven't imagined yet.*
+
+**Further Reading:**
+- [Context Engineering by Manus](https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus) 
+- [Hrishi's Claude Code Analysis](https://southbridge-research.notion.site/claude-code-an-agentic-cleanroom-analysis)
