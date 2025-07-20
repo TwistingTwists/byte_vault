@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkbytevault=self.webpackChunkbytevault||[]).push([[2024],{2024:(e,t,c)=>{c.d(t,{createArchitectureServices:()=>u.S});var u=c(8815);c(3579)}}]);
