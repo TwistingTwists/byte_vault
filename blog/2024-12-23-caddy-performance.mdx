@@ -1,11 +1,11 @@
 ---
-slug: "how-to-solve-reverse-proxy-performance-issues-in-caddy-server-a-300-performance-boost-using-unix-sockets"
-title: "Caddy Reverse Proxy Performance: 300% Boost with Unix Sockets"
+slug: "from-tcp-to-unix-sockets-caddy-performance-case-study"
+title: "From TCP Sockets to Unix Sockets: A Caddy Performance Case Study"
 date: 2024-12-23T00:00:00+00:00
 authors: [abeeshake] 
 tags: [ performance , caddy]
 ---
-A recent GitHub issue  [#6751](https://github.com/caddyserver/caddy/issues/6751)  in the Caddy server repository revealed an interesting performance bottleneck when using multiple layers of reverse proxying. Here's what was discovered and how it was resolved.
+A recent GitHub issue  [#6751](https://github.com/caddyserver/caddy/issues/6751)  in the Caddy server repository revealed a counterintuitive performance bottleneck: despite maintaining low CPU usage (1-5%), a multi-layer reverse proxy setup experienced severe throughput degradation. This investigation uncovered a critical lesson—**low CPU usage doesn't guarantee performance**. The culprit? Network stack overhead hiding beneath the surface. Here's what was discovered and how it was resolved.
 
 {/* truncate */}
 
@@ -28,6 +28,56 @@ When testing with a 1000MB file download, the performance metrics showed a clear
 - Third proxy layer (8084): ~16 Mbps with 5 threads
 
 What made this particularly interesting was that the server's CPU usage remained surprisingly low (1-5%), suggesting that the bottleneck wasn't in processing power.
+
+## When to Use Unix Sockets vs TCP
+
+Before diving into the investigation, it's worth knowing when this optimization applies:
+
+| **Criterion** | **Unix Sockets** | **TCP Sockets** |
+|---|---|---|
+| **Latency-sensitive (local services)** | ✅ Use Unix sockets | ❌ Avoid |
+| **Same machine communication** | ✅ Preferred | ⚠️ Only if required |
+| **Remote services** | ❌ Cannot use | ✅ Required |
+| **Load balancing across machines** | ❌ Not suitable | ✅ Required |
+| **Filesystem permissions needed** | ✅ Leverages OS permissions | ❌ Not applicable |
+| **Container orchestration** | ⚠️ Complex (mount volumes) | ✅ Simpler with env vars |
+| **Development/testing** | ✅ Faster local iteration | ⚠️ Adds network latency |
+| **High-throughput local proxying** | ✅ 80%+ overhead reduction | ❌ Network stack overhead |
+
+**Rule of thumb**: If your reverse proxy backend is on the same machine, Unix sockets will give you a significant performance boost. If it's remote, TCP is your only option.
+
+## The Solution
+
+The breakthrough came when testing with Unix sockets instead of TCP connections. By modifying the Caddyfile to use Unix sockets for inter-process communication, the performance issues were completely resolved. Here's what the optimized configuration looked like:
+
+```
+:8081 {
+    bind 0.0.0.0 unix//dev/shm/8081.sock
+    file_server browse
+    root * /opt/www
+}
+
+:8082 {
+    bind 0.0.0.0 unix//dev/shm/8082.sock
+    reverse_proxy unix//dev/shm/8081.sock
+}
+
+:8083 {
+    bind 0.0.0.0 unix//dev/shm/8083.sock
+    reverse_proxy unix//dev/shm/8082.sock
+}
+
+:8084 {
+    reverse_proxy unix//dev/shm/8083.sock
+}
+```
+
+## Key Takeaways
+
+1. TCP connection overhead can significantly impact performance in multi-layer reverse proxy setups
+2. Unix sockets provide a more efficient alternative for local inter-process communication
+3. Low CPU usage doesn't always mean optimal performance - network stack overhead can be the bottleneck
+4. When dealing with multiple local reverse proxies, consider using Unix sockets instead of TCP connections
 
 ## The Investigation
 
@@ -80,39 +130,5 @@ The investigation, led by Caddy maintainers including Matt Holt, involved:
 | **Commands**                                       | **Why It Is Relevant to Debugging**                                                                  | **Output and Conclusion**                                         |
 | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | Checked systemd service file settings              | Confirms that the maximum number of open files is sufficient for high-concurrency workloads.         | Verified`LimitNOFILE=1048576`. No issues found.                   |
-
-
-## The Solution
-
-The breakthrough came when testing with Unix sockets instead of TCP connections. By modifying the Caddyfile to use Unix sockets for inter-process communication, the performance issues were completely resolved. Here's what the optimized configuration looked like:
-
-```
-:8081 {
-    bind 0.0.0.0 unix//dev/shm/8081.sock
-    file_server browse
-    root * /opt/www
-}
-
-:8082 {
-    bind 0.0.0.0 unix//dev/shm/8082.sock
-    reverse_proxy unix//dev/shm/8081.sock
-}
-
-:8083 {
-    bind 0.0.0.0 unix//dev/shm/8083.sock
-    reverse_proxy unix//dev/shm/8082.sock
-}
-
-:8084 {
-    reverse_proxy unix//dev/shm/8083.sock
-}
-```
-
-## Key Takeaways
-
-1. TCP connection overhead can significantly impact performance in multi-layer reverse proxy setups
-2. Unix sockets provide a more efficient alternative for local inter-process communication
-3. Low CPU usage doesn't always mean optimal performance - network stack overhead can be the bottleneck
-4. When dealing with multiple local reverse proxies, consider using Unix sockets instead of TCP connections
 
 
