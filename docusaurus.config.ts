@@ -130,6 +130,7 @@ const config: Config = {
         //   label: 'Tutorial',
         // },
         { to: "/", label: "Blog", position: "left" },
+        { to: "/projects", label: "Projects", position: "left" },
         // { to: "/blog", label: "Blog", position: "left" },
         {
           href: "https://github.com/TwistingTwists/bytevault",
