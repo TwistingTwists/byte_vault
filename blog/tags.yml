@@ -137,3 +137,18 @@ context-engineering:
   label: Context Engineering
   permalink: /context-engineering
   description: Context engineering and prompt optimization
+
+claude-code:
+  label: Claude Code
+  permalink: /claude-code
+  description: Claude and AI-assisted coding
+
+productivity:
+  label: Productivity
+  permalink: /productivity
+  description: Productivity tips and techniques
+
+database-design:
+  label: Database Design
+  permalink: /database-design
+  description: Database design patterns and principles
