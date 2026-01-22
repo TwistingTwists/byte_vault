@@ -111,6 +111,25 @@ This solves the "hot path" problem while still enforcing max size.
 
 So the slow part (networked connection creation) is delegated to the manager and done **outside** the hot-path queue lock.
 
+From the source, the pool keeps an internal `Notify` to wake up waiters when a connection is returned:
+
+```rust
+pub(crate) struct SharedPool<M: ManageConnection + Send> {
+    pub(crate) internals: Mutex<PoolInternals<M>>,
+    pub(crate) notify: Arc<Notify>,
+}
+```
+
+And when an idle connection is queued, the pool signals a single waiter:
+
+```rust
+match pool.statics.queue_strategy {
+    QueueStrategy::Fifo => self.conns.push_back(conn),
+    QueueStrategy::Lifo => self.conns.push_front(conn),
+}
+pool.notify.notify_one();
+```
+
 ### The approvals model in practice
 
 In bb8 terms, approvals look like **permits**:
@@ -121,9 +140,31 @@ In bb8 terms, approvals look like **permits**:
 
 This prevents both over-allocation and global lock contention.
 
+The approval mechanism lives in `PoolInternals`, where `pending_conns` tracks in-flight creations and `max_size` limits approvals:
+
+```rust
+fn approvals(&mut self, config: &Builder<M>, num: u32) -> ApprovalIter {
+    let current = self.num_conns + self.pending_conns;
+    let num = min(num, config.max_size.saturating_sub(current));
+    self.pending_conns += num;
+    ApprovalIter { num: num as usize }
+}
+```
+
+When a `get()` finds no idle connections, it waits on the notify:
+
+```rust
+None => {
+    self.inner.notify.notified().await;
+    continue;
+}
+```
+
 ### Failure handling
 
 Creation can fail. In bb8 the pool simply returns the permit on failure, so the pool size accounting stays correct. You don't end up with "ghost" slots.
+
+This happens in the connect loop that backs off and, when it gives up, calls `connect_failed(approval)` to roll back the pending count.
 
 ### Why bb8 feels fast under load
 
@@ -140,3 +181,5 @@ Creation can fail. In bb8 the pool simply returns the permit on failure, so the 
 - Treat creation as a slow, fallible side channel
 
 If you keep those four ideas, you already understand the core of `bb8`.
+
+[^ref] Reference code from `djc-bb8-ef71322` (commit `ef71322`).
