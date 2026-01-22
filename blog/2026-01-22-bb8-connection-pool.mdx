@@ -1,0 +1,142 @@
+---
+slug: "bb8-connection-pool"
+title: "bb8 Connection Pool — From First Principles"
+date: 2026-01-22T00:00:00+00:00
+authors: [abeeshake]
+tags: [rust, async, networking]
+draft: false
+---
+
+Connection pools look trivial at first: keep a list of connections, hand one out when asked, put it back when done. But the moment you hit real traffic, this "simple list" becomes a hot, contested path. This post builds the idea from first principles and then maps the design to how `bb8` thinks about pooling.
+
+<!--truncate-->
+
+## Part 1: First principles
+
+### The naive pool
+
+A pool is an array (or queue) of connections:
+
+- take a lock
+- pop a connection
+- unlock
+- use it
+- lock again
+- push it back
+- unlock
+
+That works — until it doesn't.
+
+### Why it collapses on the hot path
+
+**1) Connection creation is slow**
+
+Creating a connection is network-bound. If you hold the pool lock while creating, everyone else stalls.
+
+**2) Connection creation can fail**
+
+If you shrink the queue while creating and the creation fails, you have to undo the accounting. Under load, this leads to retries and churn.
+
+**3) Lock contention becomes the bottleneck**
+
+When every request takes a global lock, your pool becomes the throttling point. The pool is now slower than the service it protects.
+
+### The key design shift
+
+Split the pool into two things:
+
+1) A **queue** of *ready* connections
+2) A **counter** for *permits / approvals* (how many total connections the pool is allowed to have)
+
+The queue is only for fast push/pop. The counter is the control plane.
+
+The idea: you can approve a connection *without* holding the queue lock while you create it.
+
+Pseudo-code:
+
+```rust
+// Shared state
+queue: Mutex<Vec<Conn>>
+approvals: AtomicUsize
+max: usize
+
+async fn get() -> Conn {
+    // Fast path: try ready queue
+    if let Some(conn) = try_pop(queue) {
+        return conn;
+    }
+
+    // Slow path: ask for approval to create a new conn
+    if approvals.fetch_add(1) < max {
+        match create_connection().await {
+            Ok(conn) => return conn,
+            Err(e) => {
+                approvals.fetch_sub(1); // give approval back
+                return retry_or_error(e);
+            }
+        }
+    }
+
+    // No approvals left: wait for a release
+    wait_for_release().await
+}
+
+fn release(conn: Conn) {
+    push(queue, conn)
+    notify_waiter()
+}
+```
+
+Why this works:
+
+- The queue lock is held only for pop/push.
+- Connection creation happens **outside** the queue lock.
+- Failure only rolls back the approval counter, not the queue.
+- Approvals are a tiny critical section (atomic increment/decrement).
+
+This solves the "hot path" problem while still enforcing max size.
+
+## Part 2: Mapping this to bb8
+
+`bb8` is a Rust async connection pool that follows these ideas closely. At a high level it provides:
+
+- A pool that hands out **ready** connections quickly
+- Async creation and validation of connections
+- A strict **max size** limit
+- Waiting when the pool is saturated
+
+### What bb8 abstracts
+
+`bb8` asks you to define a `Manager` for your connection type (how to create, validate, and recycle). The pool then handles the lifecycle and contention for you.
+
+So the slow part (networked connection creation) is delegated to the manager and done **outside** the hot-path queue lock.
+
+### The approvals model in practice
+
+In bb8 terms, approvals look like **permits**:
+
+- The pool only allows up to `max_size` live connections.
+- If the ready queue is empty and permits remain, it creates a new connection.
+- If permits are exhausted, callers wait until a connection is returned.
+
+This prevents both over-allocation and global lock contention.
+
+### Failure handling
+
+Creation can fail. In bb8 the pool simply returns the permit on failure, so the pool size accounting stays correct. You don't end up with "ghost" slots.
+
+### Why bb8 feels fast under load
+
+- Ready connections are cheap to pop
+- Creation is off the hot path
+- Max size is enforced without locking the queue for long periods
+- Waiting is async, so tasks suspend rather than spin
+
+## Practical takeaways
+
+- Don't lock the queue while creating connections
+- Use a tiny, fast "approval" counter to control max size
+- Keep the hot path a simple push/pop
+- Treat creation as a slow, fallible side channel
+
+If you keep those four ideas, you already understand the core of `bb8`.
