@@ -123,10 +123,6 @@ pub(crate) struct SharedPool<M: ManageConnection + Send> {
 And when an idle connection is queued, the pool signals a single waiter:
 
 ```rust
-match pool.statics.queue_strategy {
-    QueueStrategy::Fifo => self.conns.push_back(conn),
-    QueueStrategy::Lifo => self.conns.push_front(conn),
-}
 pool.notify.notify_one();
 ```
 
@@ -160,11 +156,83 @@ None => {
 }
 ```
 
+Key invariant in bb8’s core:
+
+```
+num_conns + pending_conns <= max_size
+```
+
+This is the pool’s correctness guardrail: live + in-flight creations never exceed `max_size`.
+
+### End-to-end flow (empty pool → connection → return)
+
+**1) `get()` when the pool is empty**
+
+1. Start a `Getting` session (increments `in_flight`).
+2. Attempt to pop an idle connection. None found.
+3. If approvals are available, return an `ApprovalIter`.
+4. No approvals? Wait on `notify`.
+5. Once notified, loop and try again.
+
+The code path for the wait is explicit:
+
+```rust
+None => {
+    self.inner.notify.notified().await;
+    continue;
+}
+```
+
+**2) A connection is created off the hot path**
+
+Approvals spawn async connection creation:
+
+```rust
+stream.push(async move { this.add_connection(approval).await });
+```
+
+**3) Connection returned to the pool**
+
+On return, bb8 either enqueues the connection or drops it and issues replacement approvals:
+
+```rust
+if let (ConnectionState::Present, false) = (state, is_broken || is_expired) {
+    locked.put(conn, None, self.inner.clone());
+    return;
+}
+
+let approvals = locked.dropped(1, &self.inner.statics);
+self.spawn_replenishing_approvals(approvals);
+self.inner.notify.notify_one();
+```
+
 ### Failure handling
 
 Creation can fail. In bb8 the pool simply returns the permit on failure, so the pool size accounting stays correct. You don't end up with "ghost" slots.
 
 This happens in the connect loop that backs off and, when it gives up, calls `connect_failed(approval)` to roll back the pending count.
+
+### Failure modes matrix (and where bb8 handles them)
+
+| Failure | Where it happens | What bb8 does |
+| --- | --- | --- |
+| Connect fails | `add_connection` loop | Rolls back pending count via `connect_failed(approval)` |
+| Connection invalid | `get()` validation | Marks invalid, records stats, retries |
+| Timeout waiting | `get()` | Returns `RunError::TimedOut` |
+
+Example for invalid connections:
+
+```rust
+match self.inner.manager.is_valid(&mut conn).await {
+    Ok(()) => return Ok(conn),
+    Err(e) => {
+        self.inner.statistics.record(StatsKind::ClosedInvalid);
+        self.inner.forward_error(e);
+        conn.state = ConnectionState::Invalid;
+        continue;
+    }
+}
+```
 
 ### Why bb8 feels fast under load
 
@@ -181,5 +249,13 @@ This happens in the connect loop that backs off and, when it gives up, calls `co
 - Treat creation as a slow, fallible side channel
 
 If you keep those four ideas, you already understand the core of `bb8`.
+
+## TL;DR diagram
+
+```
+fast path: pop idle -> (optional validate) -> hand out
+slow path: no idle -> approvals -> connect async -> enqueue -> notify waiter
+return: put back -> notify waiter (or drop + approval if broken/expired)
+```
 
 [^ref] Reference code from `djc-bb8-ef71322` (commit `ef71322`).
