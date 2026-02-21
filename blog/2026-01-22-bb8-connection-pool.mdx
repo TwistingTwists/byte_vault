@@ -4,8 +4,10 @@ title: "bb8 Connection Pool — From First Principles"
 date: 2026-01-22T00:00:00+00:00
 authors: [abeeshake]
 tags: [rust, async, networking]
-draft: false
+draft: true
 ---
+
+import Bb8PoolViz from '@site/src/components/Bb8PoolViz';
 
 Connection pools look trivial at first: keep a list of connections, hand one out when asked, put it back when done. But the moment you hit real traffic, this "simple list" becomes a hot, contested path. This post builds the idea from first principles and then maps the design to how `bb8` thinks about pooling.
 
@@ -257,5 +259,9 @@ fast path: pop idle -> (optional validate) -> hand out
 slow path: no idle -> approvals -> connect async -> enqueue -> notify waiter
 return: put back -> notify waiter (or drop + approval if broken/expired)
 ```
+
+## Interactive pool (fast vs slow path)
+
+<Bb8PoolViz />
 
 [^ref] Reference code from `djc-bb8-ef71322` (commit `ef71322`).
