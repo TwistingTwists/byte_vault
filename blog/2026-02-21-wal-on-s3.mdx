@@ -13,6 +13,8 @@ When you build a database on local disk, the WAL (Write-Ahead Log) carries a hea
 
 Two hard problems come with building a WAL on local disk:
 
+{/* truncate */}
+
 ### 1. Detecting corrupted records
 
 Every WAL record needs a checksum (Postgres uses CRC-32C). When replaying the log after a crash, the database verifies each record's checksum to detect corruption — a flipped bit, a garbled sector. You have to implement this yourself because local disks offer no integrity guarantees at the application level.
