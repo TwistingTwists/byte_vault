@@ -136,8 +136,9 @@ const config: Config = {
         // { to: "/blog", label: "Blog", position: "left" },
         {
           href: "https://github.com/TwistingTwists/bytevault",
-          label: "GitHub",
           position: "right",
+          className: "header-github-link",
+          "aria-label": "GitHub repository",
         },
       ],
     },

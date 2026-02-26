@@ -4,45 +4,134 @@
  * work well for content-centric websites.
  */
  
-
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
 
 @custom-variant dark (&:is([data-theme="dark"] *));
 
+@theme {
+  --font-sans: 'Geist', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'Fira Code', ui-monospace, SFMono-Regular, monospace;
+}
+
 /* You can override the default Infima variables here. */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
-  --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  /* Softer Teal/Green for Light Mode */
+  --ifm-color-primary: #0d9488; /* teal-600 */
+  --ifm-color-primary-dark: #0f766e; /* teal-700 */
+  --ifm-color-primary-darker: #0f766e;
+  --ifm-color-primary-darkest: #115e59; /* teal-800 */
+  --ifm-color-primary-light: #14b8a6; /* teal-500 */
+  --ifm-color-primary-lighter: #2dd4bf; /* teal-400 */
+  --ifm-color-primary-lightest: #5eead4; /* teal-300 */
+  
+  --ifm-code-font-size: 90%;
+  --ifm-font-family-base: 'Geist', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --ifm-font-family-monospace: 'Geist Mono', 'Fira Code', ui-monospace, SFMono-Regular, monospace;
+  --ifm-heading-font-weight: 600;
+
+  /* Refined Background & Text */
+  --ifm-background-color: #fafafa; /* neutral-50 */
+  --ifm-font-color-base: #1e293b; /* slate-800 */
+  --ifm-heading-color: #0f172a; /* slate-900 */
+  
+  /* Soft code blocks */
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.05);
+  --ifm-pre-background: #f1f5f9; /* slate-100 */
+  --ifm-code-background: #f1f5f9; /* slate-100 */
+  --ifm-code-padding-horizontal: 0.3rem;
+  --ifm-code-padding-vertical: 0.15rem;
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  /* Vibrant Teal for Dark Mode */
+  --ifm-color-primary: #2dd4bf; /* teal-400 */
+  --ifm-color-primary-dark: #14b8a6; /* teal-500 */
+  --ifm-color-primary-darker: #0d9488; /* teal-600 */
+  --ifm-color-primary-darkest: #0f766e; /* teal-700 */
+  --ifm-color-primary-light: #5eead4; /* teal-300 */
+  --ifm-color-primary-lighter: #99f6e4; /* teal-200 */
+  --ifm-color-primary-lightest: #ccfbf1; /* teal-100 */
+  
+  /* Deep Slate Background & Soft Text */
+  --ifm-background-color: #0f172a; /* slate-900 */
+  --ifm-font-color-base: #cbd5e1; /* slate-300 */
+  --ifm-heading-color: #f8fafc; /* slate-50 */
+
+  --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.05);
+  --ifm-pre-background: #1e293b; /* slate-800 */
+  --ifm-code-background: #1e293b; /* slate-800 */
 }
 
-.markdownContent{
-  white-space: pre-wrap;
-  
+/* Base text styling adjustments */
+body {
+  line-height: 1.75;
+  letter-spacing: -0.01em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.025em;
+  margin-top: 2.5rem;
+}
+
+h1 { font-size: 2.25rem !important; font-weight: 700 !important; }
+h2 { font-size: 1.5rem !important; font-weight: 600 !important; }
+h3 { font-size: 1.25rem !important; font-weight: 600 !important; }
+
+.markdownContent {
+  /* Apply tailwind typography prose to the markdown content */
+  @apply prose prose-slate max-w-prose dark:prose-invert;
+}
+
+/* Specific overrides for markdown content */
+.markdownContent p {
+  margin-bottom: 1.5rem;
+}
+
+.markdownContent h2 {
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Elegant Admonitions (Alerts) */
+.alert {
+  border: none;
+  border-left: 4px solid;
+  border-radius: 0.25rem;
+  box-shadow: none;
+  background-color: var(--ifm-color-emphasis-100);
+}
+[data-theme='dark'] .alert {
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .mermaid svg {
   max-width: 100%;
   max-height: 50vh; /* Limits the height to the visible screen */
-  /* height: auto; Maintains aspect ratio */
-  display: block; /* Prevents inline spacing issues */
-  margin: 0 auto; /* Centers the SVG horizontally */
+  display: block;
+  margin: 2rem auto; /* Centers and adds generous spacing */
+}
+
+/* Navbar GitHub Icon */
+.header-github-link:hover {
+  opacity: 0.6;
+}
+
+.header-github-link::before {
+  content: '';
+  width: 24px;
+  height: 24px;
+  display: flex;
+  background-color: var(--ifm-navbar-link-color);
+  mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12'/%3E%3C/svg%3E");
+  transition: background-color var(--ifm-transition-fast), opacity var(--ifm-transition-fast);
+}
+
+[data-theme='dark'] .header-github-link::before {
+  background-color: var(--ifm-navbar-link-color);
 }
