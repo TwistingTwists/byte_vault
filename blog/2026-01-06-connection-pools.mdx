@@ -1,0 +1,37 @@
+---
+slug: "connection-pools"
+title: "Connection Pools from First Principles"
+date: 2026-01-06T00:00:00+00:00
+authors: [abeeshake]
+tags: [first-principles]
+draft: true
+---
+
+Let's create a connection pool from the first principles. A connection pool allows for sharing the networking resources across the applicatoin.
+
+High level requirements of a pool: 
+
+1. should be able to 'hand a connection out' from pool and 'release' connections back to the pool (when not in use). 
+2. should have min and max connections limits.
+3. should be able to grow and shrink based on the load. 
+    - During bursty traffic, must not go beyond max connections. 
+
+<!--truncate-->
+
+For basics, a connection pool is a list of connections. Maintaining a list of `Conn` structs, is the connection pool. 
+
+Handout and release from the pools are simply push and pop from the list (queue).
+
+That's the big idea. Voila! 
+
+Here are a few scenarios that might ruin this simple design:
+- starting state 
+- establishing connection state 
+- connection errors
+- bursty traffic 
+- idle state 
+
+-- two processes asking for the connections -> queue access should be done by one process at a time, to ensure that the same 'Conn' is not handed over to two. 
+
+
+Looking into bb8.

@@ -1,0 +1,126 @@
+---
+slug: "bb8-connection-pool"
+title: "bb8 Connection Pool — From First Principles"
+date: 2026-01-22T00:00:00+00:00
+authors: [abeeshake]
+tags: [rust, async, networking]
+draft: false
+---
+
+#### Per record integrity 
+Already given by s3 object integrity. S3 gives 11 9's of reliability which is enough for databases.
+
+#### Torn pages
+
+Q: What are torn pages? And why do they occur?
+
+Postgres has it's own concept of arranging data in 'pages'. The underlying block device - the hard disk - has a similar concept of 'page'. It indicates how large of a data can block storage atomically write. Let's call them postgres-page and hardware-page for clarity. For example, postgres-page size 8kb, and underlying hardware-page being 4kb (defaults). 
+In other words, postgres-page is larger than the power fail atomicity of the storage device (hardware-page).
+
+Torn pages happen because when writing to disk - the postgres-page and hardware-page are not same. So, the write of postgres-page (8kb) is not atomic. If the power loss happens between those two writes (4kb each), data could be lost. The recovery mechanism (WAL) needs to take care of this scenario.
+
+This is not a problem with building wal on s3. S3 now gives CAS (compare-and-swap) style writing which means there is not impedance-mismatch between the page size of your wal and page_size that s3 can support. From above example, this means 8kb could be atomically committed when wal lives on s3. So problem of torn pages goes away.
+
+
+
+is the wal record sequence is intact after gc'ed wal or other operations on wal? - SetSum allows do that on S3 on O(1) without replaying the entire buffer.
+
+
+## Setsum: Associative and Commutative Hashing
+
+The core idea is simple: you want to verify that when you split a dataset into two groups (keep vs. delete), you haven't accidentally lost or duplicated anything. Setsum lets you do this with checksums that can be combined and compared in any order.
+
+---
+
+### The Basic Intuition
+
+Think of it like a bag of marbles. If you start with 10 marbles and split them into two bags, you should always be able to verify that bag A + bag B = the original 10. Setsum does this for log entries, and crucially, **it doesn't matter what order you add things up**.
+
+A normal checksum like MD5 is order-dependent: `checksum("A" + "B") ≠ checksum("B" + "A")`. Setsum is designed so that `setsum({A, B}) = setsum({B, A})` — it's commutative and associative, like addition.
+
+---
+
+### Example 1: Basic Insertion Order Doesn't Matter
+
+```
+setsum1 = {}
+setsum1.insert("log_entry_001")
+setsum1.insert("log_entry_002")
+→ digest: 0xABCD...
+
+setsum2 = {}
+setsum2.insert("log_entry_002")   ← different order
+setsum2.insert("log_entry_001")
+→ digest: 0xABCD...   ← same!
+```
+
+Both represent the same *set*, so their digests are identical.
+
+---
+
+### Example 2: The Garbage Collection Use Case
+
+Imagine your log has 5 entries: `[E1, E2, E3, E4, E5]`.
+
+You decide to garbage collect `E1` and `E2`, keeping `E3, E4, E5`.
+
+**Before any GC**, you compute the digest of everything:
+```
+all_data = setsum({E1, E2, E3, E4, E5})  → digest: 0x1111...
+```
+
+After GC, you separately track:
+```
+live_data = setsum({E3, E4, E5})           → digest: 0x9999...
+gc_data   = setsum({E1, E2})               → digest: 0x8888...
+```
+
+The guarantee: `union(live_data, gc_data)` must equal `all_data`.
+
+```
+union(0x9999..., 0x8888...) = 0x1111... ✓
+```
+
+If a bug caused `E3` to be silently dropped during GC, you'd get:
+```
+live_data = setsum({E4, E5})               → digest: 0x7777...
+union(0x7777..., 0x8888...) = 0x????...  ≠ 0x1111...  ✗  ← caught!
+```
+
+---
+
+### Example 3: Spurious Adds and Removes Cancel Out
+
+```
+setsum.insert("C")
+setsum.insert("A")
+setsum.insert("B")
+setsum.remove("C")
+→ same digest as setsum({A, B})
+```
+
+This is powerful because in a real system, you might tentatively add entries and then revoke them. The math works out as long as every insert has a matching remove.
+
+---
+
+### Example 4: Cross-Implementation Verification
+
+Say two totally separate teams (or two different binary versions of your software) both process the same log:
+
+- **Team A's binary** computes: `live = 0x9999...`, `gc = 0x8888...`
+- **Team B's binary** computes: `live = 0x9999...`, `gc = 0x8888...`
+
+They both agree. If they disagree, *something is wrong in one of the implementations* — a powerful safety net when rolling out new releases.
+
+---
+
+### Why Not Just a Normal Hash?
+
+| Property | Normal Hash | Setsum |
+|---|---|---|
+| Order-independent | ✗ | ✓ |
+| Merge two digests without raw data | ✗ | ✓ |
+| Remove an element from digest | ✗ | ✓ |
+| Verify A + B = Total | Requires full re-hash | Constant time |
+
+The key win is that you can **combine and compare digests without ever going back to the raw data** — essential for large logs where re-reading everything would be prohibitively expensive.

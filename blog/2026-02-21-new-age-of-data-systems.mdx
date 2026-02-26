@@ -1,0 +1,23 @@
+---
+slug: "new-age-of-data-systems"
+title: "The New Age of Data Systems — Object-Native by Default"
+date: 2026-02-21T00:00:00+00:00
+authors: [abeeshake]
+tags: [databases, s3, architecture, data-systems]
+draft: true
+---
+
+Here is the hypothesis:
+
+As the data grows, 1TB / 10TB is going to be the 'normal' amount of data that applications handle. As more agents produce more data / more logs -> object native design will be essential for keeping costs cheap and operating on scale. 
+
+LanceDB with lanceformat + turbopuffer building object native vector store + fTS index are two examples. GreptimeDB and others also offer similar functionality. 
+
+S2.dev allows streams -> natively on s3. turbopuffer implemented their 'kafka like queue' natively on s3. 
+
+Of course, these solutions will have some limitations. But they work for the workload they are designed for. That's the point. For many new 'agentic' workloads that will come will demand new kinds of systems that are optimised for 'that' usecase. 
+
+now the s3 is the malloc of the internet - with CAS - it simplifies lots of things on how to build databases and similar systems. 
+
+Datafusion is another interesting project which allows composing different pieces of the database - and allow building on top of s3 much easier.
+
