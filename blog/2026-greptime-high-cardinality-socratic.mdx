@@ -1,0 +1,220 @@
+---
+slug: "greptime-high-cardinality"
+title: "1 Million Rows, 10 Columns, One Table, No Indexes"
+date: 2026-02-26T00:00:00+00:00
+authors: [abeeshake]
+tags: [time-series, databases, columnar-storage, high-cardinality, arrow, parquet]
+draft: true
+---
+
+# 1 Million Rows, 10 Columns, One Table, No Indexes
+
+Original tweet that inspired this post. 
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">The interesting part of the flat format is that BulkMemtable uses a part-based design: incoming batches are stored as sorted Arrow RecordBatches (BulkParts) and merged as needed. After merging, these parts can be encoded into in-memory Parquet (EncodedBulkParts) to reduce memory… <a href="https://t.co/VGPGR60FRx">pic.twitter.com/VGPGR60FRx</a></p>&mdash; Greptime (@Greptime) <a href="https://twitter.com/Greptime/status/2026850140397645852?ref_src=twsrc%5Etfw">February 26, 2026</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+
+
+GreptimeDB solves the high-cardinality problem by treating millions of time-series as rows in a flat columnar table, using Arrow for fast writes and Parquet for efficient storage.
+
+
+{/* truncate */}
+
+---
+
+## The Problem
+
+Imagine you're building a monitoring system for 1 million IoT devices (sensors, Raspberry Pis, edge devices) distributed across multiple regions. Each device reports temperature, CPU, memory, disk usage—all with tags like `region=us-west`, `zone=1a`, `building=dc-5`.
+
+Here's the issue: **Every unique tag combination becomes a separate time-series.**
+
+With 1M devices × 10 possible tag combinations = **10 million unique time-series.**
+
+Traditional time-series databases create a separate index for each. Result: memory explodes, writes slow to a crawl because every write triggers an expensive merge operation.
+
+**The question is: How do you handle this without drowning in memory overhead?**
+
+---
+
+## Part 1: The Simplest Way
+
+Stop. Think about it yourself before reading further.
+
+If you had to design this system, what's your instinct? How would you store 10M time-series?
+
+### The Insight
+
+You might realize: **Why create separate indexes at all?**
+
+What if you treated all 10M series as rows in one giant table? Like a spreadsheet where each row is a unique time-series.
+
+But here's the catch: **Row-based storage is slow for analytics.**
+
+---
+
+## Part 2: Why Columnar?
+
+**Question:** If you switched to columnar (like Parquet), what problem does that solve?
+
+Think about it:
+- You have millions of series (rows)
+- Each series has: timestamp, temperature, cpu, memory, disk, region, zone, datacenter (columns)
+- During analysis, you query for "temperature readings from US West" — you only need 2 columns (timestamp, temperature)
+
+With row-based storage, you read entire rows from disk. Wasteful.
+
+With columnar, you read only the columns you need. Fast.
+
+**Plus:** Columnar compression (dictionary encoding, run-length encoding) shrinks storage by 80%+.
+
+---
+
+## Part 3: The Durability Problem
+
+But here's where it gets tricky.
+
+**Question:** Parquet is immutable. You can't append writes to it. So if you have 1000 writes/second, how do you handle that?
+
+Do you compress to Parquet immediately? No—you'd rewrite the entire file for each write.
+
+Keep everything in memory as Parquet? No—memory explodes again.
+
+**What do you do?**
+
+### The Answer: Buffer First, Compress Later
+
+You need a **buffer layer** for incoming writes. Something fast, in-memory, columnar. 
+
+Enter: **Apache Arrow**.
+
+Arrow is uncompressed columnar storage in memory. Fast writes, fast reads. Perfect for buffering.
+
+But wait—**Arrow in memory still uses RAM.** If you have millions of series, don't you hit the same problem?
+
+---
+
+## Part 4: Visualising the write path
+
+**Question:** What if you split your buffer into multiple batches instead of one giant memtable?
+
+Like:
+- Batch 1 (Arrow): Receiving writes NOW
+- Batch 2 (Arrow): Sealed 30 seconds ago
+- Batch 3 (Arrow): Sealed 1 minute ago
+
+Now, what could you do with Batch 3 that you couldn't do with the memtable you were writing to?
+
+### The Answer
+
+You could **compress Batch 3 to Parquet and flush it to disk in parallel** while Batch 1 continues receiving writes.
+
+No blocking. No write amplification.
+
+---
+
+## Part 5: Read Path - Querying Across Multiple Formats
+
+Now you have a new problem:
+
+**Query:** "Give me temperature readings from the last 60 seconds"
+
+Your data lives in:
+- Batch 1 (Arrow, in memory, uncompressed)
+- Batch 2 (Parquet, on disk, compressed)
+- Batch 3 (Parquet, on disk, compressed)
+
+Do you decompress all 3 and merge? Expensive.
+
+**Question:** What's a better way?
+
+### The Answer: Query Predicate Pushdown
+
+You send the same query to all three:
+- Decompress and filter Batch 2 → get matching rows
+- Decompress and filter Batch 3 → get matching rows
+- Filter Batch 1 → get matching rows
+- Merge only the results
+
+**Key insight:** You don't decompress the entire Parquet file. You decompress only the rows matching your predicate.
+
+If Batch 2 has 1GB of data but your query matches 10MB, you decompress 10MB. Cheap.
+
+---
+
+## Part 6: The Full Picture
+
+Here's the architecture:
+
+```
+Writes arrive
+    ↓
+Batch 1 (Arrow, in memory)  ← Current batch, receives writes
+    ↓ (every 30 seconds, seal batch)
+Batch 2 (Arrow in memory)   ← Getting old, compress to Parquet
+    ↓
+Batch 3 (Parquet, on disk)  ← Already compressed, query via pushdown
+```
+
+Query arrives:
+```
+Apply predicate to Batch 1 (Arrow) → fast
+Apply predicate to Batch 2 (Parquet) → decompress only matching rows
+Apply predicate to Batch 3 (Parquet) → decompress only matching rows
+Merge results → send to client
+```
+
+**This is GreptimeDB's "part-based BulkMemtable":**
+- Parts = batches
+- BulkParts = Arrow batches
+- EncodedBulkParts = Parquet-compressed batches
+
+---
+
+## Why This Solves High Cardinality
+
+Remember the original problem: 10M series × expensive indexing = memory explosion.
+
+GreptimeDB's solution: **Treat those 10M series as 10M rows in a columnar table.**
+
+No per-series index. No per-series overhead. Just rows in a wide table:
+
+```
+timestamp | region | zone | server | temp | cpu
+----------|--------|------|--------|------|-----
+t1        | us-w   | 1a   | srv-001| 23.5 | 45%
+t1        | us-w   | 1a   | srv-002| 22.1 | 46%
+t1        | us-w   | 1b   | srv-003| 24.2 | 43%
+... 10M rows
+```
+
+Columnar storage + batching + lazy compression = **millions of cardinalities handled efficiently**.
+
+---
+
+## The Tradeoffs
+
+**Why not always use Parquet (compressed)?**
+- Parquet is slow for writes (immutable)
+- Arrow is fast for writes (mutable in-memory)
+
+**Why not always use Arrow?**
+- Arrow uses more memory (uncompressed)
+- Parquet saves 80% storage (compressed)
+
+**Why batching?**
+- Parallel compression (old batches compress while new batches receive writes)
+- No write blocking
+- Efficient query pushdown (don't merge unchanged batches)
+
+---
+
+## Takeaway
+
+GreptimeDB's flat format is elegant: **Instead of fighting high cardinality with complex indexing, embrace it by treating millions of series as millions of rows in a columnar table.**
+
+Use the right format for the right operation:
+- Arrow for fast buffering (writes)
+- Parquet for efficient storage (queries)
+- Lazy evaluation for performance (merge only when needed)
+
+
