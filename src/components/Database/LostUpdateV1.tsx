@@ -73,15 +73,41 @@ const keyMomentsDefinitionLostUpdate = [
 ];
 
 
+// --- Types for the visualiser's runtime state ---
+interface UncommittedWrite {
+  transaction: string;
+  target: string;
+  value: number;
+  color: string;
+}
+
+type UncommittedState = Record<string, UncommittedWrite>;
+
+interface KeyMomentHighlight {
+  currentOpPanel?: boolean;
+  db?: string[]; // Keys of the committed DB state to highlight
+  dbRead?: string[]; // Keys being read from the DB
+  uncommitted?: string[]; // Write IDs to highlight
+  timelineOps?: Array<{ transaction: string; time: number }>;
+}
+
+interface KeyMomentInfo {
+  text: string;
+  autoPause: boolean;
+  isCritical: boolean;
+  highlight: KeyMomentHighlight;
+  step: number | null;
+}
+
 const LostUpdateVisualizer = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
   const [dbState, setDbState] = useState({ A: 100 }); // Account A with initial balance
-  const [uncommittedState, setUncommittedState] = useState({});
+  const [uncommittedState, setUncommittedState] = useState<UncommittedState>({});
   const [completedOperations, setCompletedOperations] = useState([]);
-  const [keyMomentInfo, setKeyMomentInfo] = useState({ text: '', autoPause: false, isCritical: false, highlight: {}, step: null });
+  const [keyMomentInfo, setKeyMomentInfo] = useState<KeyMomentInfo>({ text: '', autoPause: false, isCritical: false, highlight: {}, step: null });
   const [readValueStore, setReadValueStore] = useState({}); // To store what each TX read
   const timelineRef = useRef(null);
 

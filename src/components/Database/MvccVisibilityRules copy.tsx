@@ -55,18 +55,69 @@ const mvccVisibilityScenario = {
 };
 
 
+// --- Types for the visualiser's runtime state ---
+interface Version {
+  id: string;
+  value: number;
+  txMin: number; // Transaction ID that created this version
+  txMinName: string; // For display
+  txMax: number | null; // Transaction ID that invalidated/superseded this version
+  txMaxName: string | null; // For display
+}
+
+interface ReadLogEntry {
+  item: string;
+  value?: number;
+  versionId?: string;
+  versionTxMin?: number;
+  time: number;
+}
+
+interface WriteLogEntry {
+  item: string;
+  newVersionId: string;
+  oldVersionId?: string;
+}
+
+interface TransactionRuntimeDetails {
+  id: number;
+  name: string;
+  startTime: number;
+  snapshotCommittedTxIds: Set<number>;
+  status: 'active' | 'committed' | 'aborted';
+  reads: ReadLogEntry[];
+  writesMade: WriteLogEntry[];
+}
+
+interface KeyMomentHighlight {
+  currentOpPanel?: boolean;
+  dataItemVersions?: { [itemName: string]: string[] }; // Version IDs to highlight
+  transactionSpecificRead?: { txName: string; item: string; versionId: string; step?: number };
+  transactionState?: string; // txName whose state panel to highlight
+  timelineOps?: Array<{ transaction: string; time: number }>;
+  committedTx?: number; // Highlight when a specific TxID gets committed
+}
+
+interface KeyMomentInfo {
+  text: string;
+  autoPause: boolean;
+  isCritical?: boolean;
+  highlight: KeyMomentHighlight;
+  step: number | null;
+}
+
 const MvccVisibilityVisualizer = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
 
-  const [dataItemVersions, setDataItemVersions] = useState({});
-  const [transactionDetails, setTransactionDetails] = useState({});
+  const [dataItemVersions, setDataItemVersions] = useState<Record<string, Version[]>>({});
+  const [transactionDetails, setTransactionDetails] = useState<Record<string, TransactionRuntimeDetails>>({});
   const [committedTxIds, setCommittedTxIds] = useState(new Set([0])); // 0 for initial data
 
   const [completedOperations, setCompletedOperations] = useState([]);
-  const [keyMomentInfo, setKeyMomentInfo] = useState({ text: '', autoPause: false, isCritical: false, highlight: {}, step: null });
+  const [keyMomentInfo, setKeyMomentInfo] = useState<KeyMomentInfo>({ text: '', autoPause: false, isCritical: false, highlight: {}, step: null });
   
   const nextTxIdRef = useRef(1);
   const timelineRef = useRef(null);

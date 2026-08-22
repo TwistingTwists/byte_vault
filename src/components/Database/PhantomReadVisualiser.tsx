@@ -80,6 +80,48 @@ const keyMomentsDefinitionPhantomRead = [
 ];
 
 
+// --- Types for the visualiser's runtime state ---
+interface EmployeeRow {
+  id: number;
+  name: string;
+  department: string;
+  salary: number;
+}
+
+interface UncommittedInsert {
+  transaction: string;
+  table: string;
+  data: EmployeeRow;
+  color: string;
+}
+
+interface ScanLogEntry {
+  transaction: string;
+  scanId: string;
+  time: number;
+  table: string;
+  predicateString: string;
+  results: EmployeeRow[];
+  color: string;
+}
+
+interface KeyMomentHighlight {
+  currentOpPanel?: boolean;
+  phantomRowId?: number; // Row that appears as a phantom
+  dbTableRows?: { [tableName: string]: number[] }; // Row IDs to highlight per table
+  uncommittedInserts?: string[]; // Insert IDs to highlight
+  scanLogEntries?: string[]; // Scan log keys to highlight
+  timelineOps?: Array<{ transaction: string; time: number }>;
+}
+
+interface KeyMomentInfo {
+  text: string;
+  autoPause: boolean;
+  isCritical: boolean;
+  highlight: KeyMomentHighlight;
+  step: number | null;
+}
+
 const PhantomReadVisualizer = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -87,10 +129,10 @@ const PhantomReadVisualizer = () => {
   const [currentStep, setCurrentStep] = useState(0);
   // DB state now includes tables
   const [dbState, setDbState] = useState({ tables: { employees: JSON.parse(JSON.stringify(initialEmployeesData)) } });
-  const [uncommittedInserts, setUncommittedInserts] = useState({});
-  const [scanLog, setScanLog] = useState({}); // To store results of scan operations
+  const [uncommittedInserts, setUncommittedInserts] = useState<Record<string, UncommittedInsert>>({});
+  const [scanLog, setScanLog] = useState<Record<string, ScanLogEntry>>({}); // To store results of scan operations
   const [completedOperations, setCompletedOperations] = useState([]);
-  const [keyMomentInfo, setKeyMomentInfo] = useState({ text: '', autoPause: false, isCritical: false, highlight: {}, step: null });
+  const [keyMomentInfo, setKeyMomentInfo] = useState<KeyMomentInfo>({ text: '', autoPause: false, isCritical: false, highlight: {}, step: null });
   const timelineRef = useRef(null);
 
   // Transaction definitions for phantom read scenario

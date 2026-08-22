@@ -34,7 +34,7 @@ export interface AnimationStateType {
     position: number;
     highlight?: boolean;
     // Enhancement fields for advanced WebGL visualization
-    id: number; // Unique identifier
+    id?: number; // Unique identifier (only set by the WebGL timeline path)
     timestamp?: number; // Absolute time reference for exact positioning
     concurrentWith?: number[]; // IDs of events this event is concurrent with
     labelPosition?: 'top' | 'bottom' | 'auto'; // Custom position for label

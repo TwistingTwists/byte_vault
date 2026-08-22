@@ -109,11 +109,17 @@ interface ReadCommittedScenarioConfig {
 }
 
 // For completed operations on the timeline
-interface CompletedTimelineOperation extends TransactionOperation {
+// An interface cannot extend a union, and the timeline renders every op kind
+// generically, so flatten onto OperationBase with the variant fields optional.
+type CompletedTimelineOperation = OperationBase & {
+  target?: string; // Present on read/write operations
+  value?: number; // Present on write operations
+  query?: string; // Present on query operations
+  category?: string; // Present on query operations
   transaction: string; // Name of the transaction (T1, T2, etc.)
   color: string; // For the dot on the timeline
   txId?: number; // Runtime ID of the transaction
-}
+};
 
 
 const phantomReadScenario: ReadCommittedScenarioConfig = {
