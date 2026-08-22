@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkbytevault||=[]).push([[1160],{3317(a){a.exports=JSON.parse('{"tag":{"label":"wal","permalink":"/byte_vault/tags/wal","allTagsPath":"/byte_vault/tags","count":1,"unlisted":false},"listMetadata":{"permalink":"/byte_vault/tags/wal","page":1,"postsPerPage":10,"totalPages":1,"totalCount":1,"blogDescription":"Blog","blogTitle":"Blog"}}')}}]);

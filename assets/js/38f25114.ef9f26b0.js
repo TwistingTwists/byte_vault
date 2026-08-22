@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkbytevault||=[]).push([[783],{5496(t){t.exports=JSON.parse('{"metadata":{"permalink":"/byte_vault/page/2","page":2,"postsPerPage":10,"totalPages":2,"totalCount":18,"previousPage":"/byte_vault/","blogDescription":"Blog","blogTitle":"Blog"}}')}}]);
